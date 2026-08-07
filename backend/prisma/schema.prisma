@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  DOING
+  COMPLETED
+  ON_HOLD
+}
+
+enum Priority {
+  NO_PRIORITY
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model User {
+  id                 String  @id @default(cuid())
+  email              String  @unique
+  name               String
+  username           String?
+  title              String?
+  avatarUrl          String?
+  googleId           String? @unique
+  isGuest            Boolean @default(false)
+  /// True for seeded "workspace member" personas (Admin, Designer, QA Team…)
+  /// that exist only to be assigned to tasks — they can never log in.
+  isDemo             Boolean @default(false)
+  hashedRefreshToken String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedProjects Project[]  @relation("ProjectOwner")
+  ownedTasks    Task[]     @relation("TaskOwner")
+  ledProjects   Project[]  @relation("ProjectLead")
+  reportedTasks Task[]     @relation("TaskReporter")
+  memberTasks   Task[]     @relation("TaskMembers")
+  comments      Comment[]
+  activities    Activity[]
+}
+
+model Project {
+  id       String    @id @default(cuid())
+  name     String
+  priority Priority  @default(NO_PRIORITY)
+  dueDate  DateTime?
+
+  /// Workspace scoping: every project belongs to the signed-in user who owns it.
+  ownerId String
+  owner   User    @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  leadId  String?
+  lead    User?   @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(NO_PRIORITY)
+  startDate   DateTime?
+  dueDate     DateTime?
+  /// Fractional ordering key within a status column (Kanban drag & drop).
+  position    Float      @default(0)
+
+  ownerId    String
+  owner      User     @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporterId String?
+  reporter   User?    @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+
+  /// Subtasks are tasks with a parent.
+  parentId String?
+  parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks Task[]  @relation("Subtasks")
+
+  members    User[]     @relation("TaskMembers")
+  labels     Label[]    @relation("TaskLabels")
+  comments   Comment[]
+  activities Activity[]
+  resources  Resource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId, status, position])
+  @@index([parentId])
+}
+
+model Label {
+  id    String @id @default(cuid())
+  name  String @unique
+  tasks Task[] @relation("TaskLabels")
+}
+
+model Resource {
+  id     String @id @default(cuid())
+  name   String
+  url    String
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id   String @id @default(cuid())
+  body String
+
+  taskId   String
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId String?
+  parent   Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("Replies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+}
+
+model Activity {
+  id   String @id @default(cuid())
+  /// e.g. "priority_changed", "status_changed", "update_posted"
+  type String
+  meta Json?
+
+  taskId  String
+  task    Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
