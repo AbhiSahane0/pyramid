@@ -105,7 +105,10 @@ export function ViewHeader({
       <div className="flex flex-1 items-center justify-end gap-2">
         {searchOpen ? (
           <div className="relative w-full max-w-sm">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Search
+              className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
             <Input
               ref={searchRef}
               autoFocus
@@ -185,7 +188,10 @@ export function ViewHeader({
             </div>
             <ul>
               {FIELD_OPTIONS.map(({ key, label }) => (
-                <li key={key} className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-accent">
+                <li
+                  key={key}
+                  className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-accent"
+                >
                   <span className="text-sm">{label}</span>
                   <Checkbox
                     checked={prefs.fields[key]}
@@ -202,7 +208,12 @@ export function ViewHeader({
         {/* Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" aria-label="Filter tasks" className="relative size-9">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Filter tasks"
+              className="relative size-9"
+            >
               <Filter className="size-4" aria-hidden />
               {filterCount > 0 ? (
                 <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[0.6rem] font-semibold text-primary-foreground">
@@ -215,24 +226,33 @@ export function ViewHeader({
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="gap-2">
                 <span className="flex size-4 items-center justify-center">
-                  <StatusDot status={filters.status ?? "TODO"} className={filters.status ? "" : "bg-muted-foreground/40"} />
+                  <StatusDot
+                    status={filters.status ?? "TODO"}
+                    className={filters.status ? "" : "bg-muted-foreground/40"}
+                  />
                 </span>
                 Status
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="w-44 rounded-xl p-1.5">
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Status</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Status
+                  </DropdownMenuLabel>
                   {STATUS_ORDER.map((status) => (
                     <DropdownMenuItem
                       key={status}
                       className="gap-2"
                       onClick={() =>
-                        setFilter({ status: filters.status === status ? undefined : status })
+                        setFilter({
+                          status: filters.status === status ? undefined : status,
+                        })
                       }
                     >
                       <StatusDot status={status} />
                       {STATUS_META[status].label}
-                      {filters.status === status ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                      {filters.status === status ? (
+                        <Check className="ml-auto size-4" aria-hidden />
+                      ) : null}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -241,18 +261,25 @@ export function ViewHeader({
 
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="gap-2">
-                <PriorityIcon priority={filters.priority ?? "HIGH"} className={filters.priority ? "" : "text-muted-foreground"} />
+                <PriorityIcon
+                  priority={filters.priority ?? "HIGH"}
+                  className={filters.priority ? "" : "text-muted-foreground"}
+                />
                 Priority
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="w-44 rounded-xl p-1.5">
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Priority</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Priority
+                  </DropdownMenuLabel>
                   {PRIORITY_ORDER.map((priority) => (
                     <DropdownMenuItem
                       key={priority}
                       className={cn("gap-2", PRIORITY_META[priority].textClass)}
                       onClick={() =>
-                        setFilter({ priority: filters.priority === priority ? undefined : priority })
+                        setFilter({
+                          priority: filters.priority === priority ? undefined : priority,
+                        })
                       }
                     >
                       <PriorityIcon priority={priority} />
@@ -273,16 +300,23 @@ export function ViewHeader({
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="max-h-72 w-52 overflow-y-auto rounded-xl p-1.5">
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Members</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Members
+                  </DropdownMenuLabel>
                   {members.map((member) => (
                     <DropdownMenuItem
                       key={member.id}
                       onClick={() =>
-                        setFilter({ memberId: filters.memberId === member.id ? undefined : member.id })
+                        setFilter({
+                          memberId:
+                            filters.memberId === member.id ? undefined : member.id,
+                        })
                       }
                     >
                       {member.name}
-                      {filters.memberId === member.id ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                      {filters.memberId === member.id ? (
+                        <Check className="ml-auto size-4" aria-hidden />
+                      ) : null}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -296,16 +330,22 @@ export function ViewHeader({
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="max-h-72 w-48 overflow-y-auto rounded-xl p-1.5">
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Labels</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Labels
+                  </DropdownMenuLabel>
                   {labels.map((label) => (
                     <DropdownMenuItem
                       key={label.id}
                       onClick={() =>
-                        setFilter({ labelId: filters.labelId === label.id ? undefined : label.id })
+                        setFilter({
+                          labelId: filters.labelId === label.id ? undefined : label.id,
+                        })
                       }
                     >
                       {label.name}
-                      {filters.labelId === label.id ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                      {filters.labelId === label.id ? (
+                        <Check className="ml-auto size-4" aria-hidden />
+                      ) : null}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -319,18 +359,23 @@ export function ViewHeader({
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="max-h-72 w-52 overflow-y-auto rounded-xl p-1.5">
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Reporter</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Reporter
+                  </DropdownMenuLabel>
                   {members.map((member) => (
                     <DropdownMenuItem
                       key={member.id}
                       onClick={() =>
                         setFilter({
-                          reporterId: filters.reporterId === member.id ? undefined : member.id,
+                          reporterId:
+                            filters.reporterId === member.id ? undefined : member.id,
                         })
                       }
                     >
                       {member.name}
-                      {filters.reporterId === member.id ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                      {filters.reporterId === member.id ? (
+                        <Check className="ml-auto size-4" aria-hidden />
+                      ) : null}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>

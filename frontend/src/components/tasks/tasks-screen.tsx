@@ -25,7 +25,10 @@ function BoardSkeleton() {
   return (
     <div className="flex flex-1 gap-4 overflow-hidden px-4 sm:px-6">
       {[0, 1, 2, 3].map((column) => (
-        <div key={column} className="flex w-[19rem] shrink-0 flex-col gap-2.5 rounded-xl border bg-muted/40 p-3">
+        <div
+          key={column}
+          className="flex w-[19rem] shrink-0 flex-col gap-2.5 rounded-xl border bg-muted/40 p-3"
+        >
           <Skeleton className="h-5 w-24" />
           {Array.from({ length: 3 - (column % 2) }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
@@ -50,7 +53,11 @@ function ListSkeleton() {
 }
 
 /** Tasks surface shared by the workspace Tasks page and project detail. */
-export function TasksScreen({ title = "Tasks", projectId, storageKey }: TasksScreenProps) {
+export function TasksScreen({
+  title = "Tasks",
+  projectId,
+  storageKey,
+}: TasksScreenProps) {
   const { prefs, hydrated, setMode, toggleField } = useViewPrefs(storageKey);
   const [filters, setFilters] = useState<TaskFilters>({});
   const [search, setSearch] = useState("");
@@ -89,13 +96,22 @@ export function TasksScreen({ title = "Tasks", projectId, storageKey }: TasksScr
       />
 
       {isPending || !hydrated ? (
-        prefs.mode === "list" && hydrated ? <ListSkeleton /> : <BoardSkeleton />
+        prefs.mode === "list" && hydrated ? (
+          <ListSkeleton />
+        ) : (
+          <BoardSkeleton />
+        )
       ) : isError ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
           <p className="text-sm text-muted-foreground">
             Couldn&apos;t load tasks. Check your connection and try again.
           </p>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="gap-1.5"
+          >
             <RotateCcw className="size-4" aria-hidden />
             Retry
           </Button>

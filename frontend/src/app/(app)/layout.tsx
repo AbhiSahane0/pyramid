@@ -2,11 +2,7 @@ import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopbarBreadcrumb } from "@/components/topbar-breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (

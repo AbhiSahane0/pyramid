@@ -5,12 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 export type ViewMode = "list" | "board";
 
 export type TaskField =
-  | "priority"
-  | "members"
-  | "dueDate"
-  | "labels"
-  | "status"
-  | "reporter";
+  "priority" | "members" | "dueDate" | "labels" | "status" | "reporter";
 
 export interface ViewPrefs {
   mode: ViewMode;

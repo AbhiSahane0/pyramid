@@ -1,17 +1,8 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import {
-  ArrowRight,
-  ChevronDown,
-  Plus,
-  Settings2,
-  UserRound,
-  Users,
-} from "lucide-react";
-import {
-  DatePicker,
-} from "@/components/tasks/date-picker";
+import { ArrowRight, ChevronDown, Plus, Settings2, UserRound, Users } from "lucide-react";
+import { DatePicker } from "@/components/tasks/date-picker";
 import {
   LabelPicker,
   MemberPicker,
@@ -36,12 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import { useMe, useMembers, useUpdateTask } from "@/hooks/use-api";
-import {
-  PRIORITY_META,
-  STATUS_META,
-  type Activity,
-  type TaskDetail,
-} from "@/lib/types";
+import { PRIORITY_META, STATUS_META, type Activity, type TaskDetail } from "@/lib/types";
 
 function activityText(activity: Activity): string {
   switch (activity.type) {
@@ -78,10 +64,20 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
             Details
           </CollapsibleTrigger>
           <span className="flex-1" />
-          <Button variant="ghost" size="icon" aria-label="Add field" className="size-6 text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Add field"
+            className="size-6 text-muted-foreground"
+          >
             <Plus className="size-4" aria-hidden />
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Details settings" className="size-6 text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Details settings"
+            className="size-6 text-muted-foreground"
+          >
             <Settings2 className="size-4" aria-hidden />
           </Button>
         </div>
@@ -95,7 +91,11 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                   onChange={(status) => patch({ status })}
                   align="start"
                   trigger={
-                    <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 font-medium">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2 font-medium"
+                    >
                       <StatusDot status={task.status} />
                       {STATUS_META[task.status].label}
                     </Button>
@@ -139,7 +139,11 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                         <MemberAvatars members={task.members} max={4} />
                       </button>
                     ) : (
-                      <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 font-medium text-muted-foreground">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 px-2 font-medium text-muted-foreground"
+                      >
                         <Users className="size-4" aria-hidden />
                         Add members
                       </Button>
@@ -174,7 +178,11 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                   onChange={(labelIds) => patch({ labelIds })}
                   align="start"
                   trigger={
-                    <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 font-medium text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2 font-medium text-muted-foreground"
+                    >
                       {task.labels.length > 0
                         ? `${task.labels.length} label${task.labels.length > 1 ? "s" : ""}`
                         : "Add labels"}
@@ -194,7 +202,11 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
               <dd>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 font-medium">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2 font-medium"
+                    >
                       {task.reporter ? (
                         <>
                           <UserAvatar
@@ -206,13 +218,19 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                         </>
                       ) : (
                         <>
-                          <UserRound className="size-4 text-muted-foreground" aria-hidden />
+                          <UserRound
+                            className="size-4 text-muted-foreground"
+                            aria-hidden
+                          />
                           <span className="text-muted-foreground">Set reporter</span>
                         </>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="max-h-72 w-52 overflow-y-auto rounded-xl p-1.5">
+                  <DropdownMenuContent
+                    align="start"
+                    className="max-h-72 w-52 overflow-y-auto rounded-xl p-1.5"
+                  >
                     <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                       Reporter
                     </DropdownMenuLabel>
@@ -222,7 +240,11 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                         className="gap-2"
                         onClick={() => patch({ reporterId: member.id })}
                       >
-                        <UserAvatar name={member.name} avatarUrl={member.avatarUrl} className="size-5" />
+                        <UserAvatar
+                          name={member.name}
+                          avatarUrl={member.avatarUrl}
+                          className="size-5"
+                        />
                         {member.name}
                       </DropdownMenuItem>
                     ))}
@@ -267,7 +289,9 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                       <span className="font-semibold">{actorName}</span>{" "}
                       <span className="text-muted-foreground">
                         {activityText(activity)} ·{" "}
-                        {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(activity.createdAt), {
+                          addSuffix: true,
+                        })}
                       </span>
                     </p>
                   </li>

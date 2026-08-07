@@ -35,12 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTask, useUpdateTask } from "@/hooks/use-api";
-import {
-  PRIORITY_META,
-  STATUS_META,
-  type Task,
-  type TaskStatus,
-} from "@/lib/types";
+import { PRIORITY_META, STATUS_META, type Task, type TaskStatus } from "@/lib/types";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(300, "Keep it under 300 characters"),
@@ -162,7 +157,11 @@ export function TaskFormDialog({
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Write API Documentation" autoFocus {...field} />
+                    <Input
+                      placeholder="e.g. Write API Documentation"
+                      autoFocus
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -197,7 +196,12 @@ export function TaskFormDialog({
                     onChange={field.onChange}
                     align="start"
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <StatusDot status={field.value} />
                         {STATUS_META[field.value].label}
                       </Button>
@@ -214,7 +218,12 @@ export function TaskFormDialog({
                     onChange={field.onChange}
                     align="start"
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <PriorityIcon priority={field.value} />
                         {PRIORITY_META[field.value].label}
                       </Button>
@@ -230,9 +239,16 @@ export function TaskFormDialog({
                     value={field.value}
                     onChange={field.onChange}
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <CalendarIcon className="size-3.5" aria-hidden />
-                        {field.value ? format(new Date(field.value), "MMM d, yyyy") : "Due date"}
+                        {field.value
+                          ? format(new Date(field.value), "MMM d, yyyy")
+                          : "Due date"}
                       </Button>
                     }
                   />
@@ -247,9 +263,16 @@ export function TaskFormDialog({
                     onChange={field.onChange}
                     align="start"
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <Users className="size-3.5" aria-hidden />
-                        {field.value.length > 0 ? `${field.value.length} member${field.value.length > 1 ? "s" : ""}` : "Members"}
+                        {field.value.length > 0
+                          ? `${field.value.length} member${field.value.length > 1 ? "s" : ""}`
+                          : "Members"}
                       </Button>
                     }
                   />
@@ -264,9 +287,16 @@ export function TaskFormDialog({
                     onChange={field.onChange}
                     align="start"
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <Tag className="size-3.5" aria-hidden />
-                        {field.value.length > 0 ? `${field.value.length} label${field.value.length > 1 ? "s" : ""}` : "Labels"}
+                        {field.value.length > 0
+                          ? `${field.value.length} label${field.value.length > 1 ? "s" : ""}`
+                          : "Labels"}
                       </Button>
                     }
                   />

@@ -16,8 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Pyramid — Task Management",
-  description:
-    "Plan, track and ship work with boards, lists, projects and themes.",
+  description: "Plan, track and ship work with boards, lists, projects and themes.",
 };
 
 /** Applies the stored accent color before hydration to avoid a theme flash. */

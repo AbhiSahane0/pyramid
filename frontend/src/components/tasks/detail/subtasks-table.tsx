@@ -67,7 +67,9 @@ export function SubtasksTable({ parentId, subtasks }: SubtasksTableProps) {
                     <MemberAvatars members={subtask.members} />
                   </TableCell>
                   <TableCell className="text-sm">
-                    {subtask.dueDate ? format(new Date(subtask.dueDate), "dd MMM yyyy") : "—"}
+                    {subtask.dueDate
+                      ? format(new Date(subtask.dueDate), "dd MMM yyyy")
+                      : "—"}
                   </TableCell>
                   <TableCell className="pr-4 text-right">
                     <TaskActionsMenu task={subtask} />

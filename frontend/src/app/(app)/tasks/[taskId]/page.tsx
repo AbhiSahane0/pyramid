@@ -104,7 +104,10 @@ function AddResourceDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={addResource.isPending || !name.trim() || !url.trim()}>
+            <Button
+              type="submit"
+              disabled={addResource.isPending || !name.trim() || !url.trim()}
+            >
               Add
             </Button>
           </DialogFooter>
@@ -132,7 +135,9 @@ export default function TaskDetailPage() {
     const notFound = error instanceof ApiError && error.status === 404;
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className="font-medium">{notFound ? "Task not found" : "Couldn't load this task"}</p>
+        <p className="font-medium">
+          {notFound ? "Task not found" : "Couldn't load this task"}
+        </p>
         <p className="text-sm text-muted-foreground">
           {notFound
             ? "It may have been deleted or belongs to another workspace."
@@ -143,7 +148,12 @@ export default function TaskDetailPage() {
             Back to tasks
           </Button>
           {!notFound ? (
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="gap-1.5"
+            >
               <RotateCcw className="size-4" aria-hidden />
               Retry
             </Button>
@@ -194,10 +204,19 @@ export default function TaskDetailPage() {
               )}
 
               <div className="flex shrink-0 items-center gap-1">
-                <Button variant="outline" size="icon" aria-label="Private task" className="size-8 text-muted-foreground">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Private task"
+                  className="size-8 text-muted-foreground"
+                >
                   <Lock className="size-4" aria-hidden />
                 </Button>
-                <Button variant="outline" aria-label="Watchers" className="h-8 gap-1 px-2 text-muted-foreground">
+                <Button
+                  variant="outline"
+                  aria-label="Watchers"
+                  className="h-8 gap-1 px-2 text-muted-foreground"
+                >
                   <Eye className="size-4" aria-hidden />
                   <span className="text-xs font-medium">1</span>
                 </Button>
@@ -263,7 +282,9 @@ export default function TaskDetailPage() {
                 ))}
                 <LabelPicker
                   value={task.labels.map((l) => l.id)}
-                  onChange={(labelIds) => updateTask.mutate({ id: task.id, input: { labelIds } })}
+                  onChange={(labelIds) =>
+                    updateTask.mutate({ id: task.id, input: { labelIds } })
+                  }
                   align="start"
                   trigger={
                     <Button

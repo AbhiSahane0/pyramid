@@ -33,7 +33,10 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
         </Link>
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Search
+            className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}

@@ -104,7 +104,11 @@ export default function ProfileSettingsPage() {
         <Form {...form}>
           <form onSubmit={onSubmit} className="rounded-xl border bg-card">
             <SettingRow label="Profile picture">
-              <UserAvatar name={user.name} avatarUrl={user.avatarUrl} className="size-10" />
+              <UserAvatar
+                name={user.name}
+                avatarUrl={user.avatarUrl}
+                className="size-10"
+              />
             </SettingRow>
 
             <SettingRow label="Email">
@@ -196,7 +200,9 @@ export default function ProfileSettingsPage() {
       <section aria-label="Workspace access">
         <h2 className="mb-4 text-lg font-semibold tracking-tight">Workspace access</h2>
         <div className="flex flex-col gap-3 rounded-xl border bg-card px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">Remove yourself from the workspace</p>
+          <p className="text-sm text-muted-foreground">
+            Remove yourself from the workspace
+          </p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button

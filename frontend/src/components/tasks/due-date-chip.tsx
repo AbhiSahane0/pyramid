@@ -3,13 +3,7 @@ import { CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Rounded date chip from the board cards — red when overdue. */
-export function DueDateChip({
-  date,
-  className,
-}: {
-  date: string;
-  className?: string;
-}) {
+export function DueDateChip({ date, className }: { date: string; className?: string }) {
   const parsed = new Date(date);
   const overdue = isPast(parsed) && !isToday(parsed);
   return (

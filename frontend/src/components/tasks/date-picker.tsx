@@ -5,11 +5,7 @@ import { CalendarIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface DatePickerProps {
@@ -21,7 +17,13 @@ interface DatePickerProps {
 }
 
 /** Calendar popover matching the detail page's Dates control. */
-export function DatePicker({ value, onChange, placeholder = "Date", trigger, className }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onChange,
+  placeholder = "Date",
+  trigger,
+  className,
+}: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = value ? new Date(value) : undefined;
 

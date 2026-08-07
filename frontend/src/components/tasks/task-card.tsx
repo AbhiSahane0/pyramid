@@ -46,14 +46,21 @@ export function TaskCard({ task, fields, overlay }: TaskCardProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold leading-snug">{task.title}</p>
-        <TaskActionsMenu task={task} className="-mr-1.5 -mt-1 size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100" />
+        <TaskActionsMenu
+          task={task}
+          className="-mr-1.5 -mt-1 size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+        />
       </div>
 
       {(fields.members && firstMember) || (fields.dueDate && task.dueDate) ? (
         <div className="flex items-center justify-between gap-2">
           {fields.members && firstMember ? (
             <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-foreground">
-              <UserAvatar name={firstMember.name} avatarUrl={firstMember.avatarUrl} className="size-5" />
+              <UserAvatar
+                name={firstMember.name}
+                avatarUrl={firstMember.avatarUrl}
+                className="size-5"
+              />
               <span className="truncate">{firstMember.name}</span>
               {task.members.length > 1 ? (
                 <span className="text-muted-foreground">+{task.members.length - 1}</span>

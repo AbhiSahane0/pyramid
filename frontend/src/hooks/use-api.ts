@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -44,7 +40,11 @@ export function useLogout() {
 }
 
 export function useMembers() {
-  return useQuery({ queryKey: queryKeys.members, queryFn: api.users.members, staleTime: 300_000 });
+  return useQuery({
+    queryKey: queryKeys.members,
+    queryFn: api.users.members,
+    staleTime: 300_000,
+  });
 }
 
 export function useUpdateProfile() {
@@ -76,7 +76,11 @@ export function useLeaveWorkspace() {
 // --- Labels ---
 
 export function useLabels() {
-  return useQuery({ queryKey: queryKeys.labels, queryFn: api.labels.list, staleTime: 300_000 });
+  return useQuery({
+    queryKey: queryKeys.labels,
+    queryFn: api.labels.list,
+    staleTime: 300_000,
+  });
 }
 
 // --- Tasks ---
@@ -92,7 +96,10 @@ export function useTask(id: string) {
   return useQuery({ queryKey: queryKeys.task(id), queryFn: () => api.tasks.get(id) });
 }
 
-function invalidateTasks(queryClient: ReturnType<typeof useQueryClient>, taskId?: string) {
+function invalidateTasks(
+  queryClient: ReturnType<typeof useQueryClient>,
+  taskId?: string,
+) {
   void queryClient.invalidateQueries({ queryKey: ["tasks"] });
   if (taskId) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) });
@@ -176,7 +183,8 @@ export function useAddComment(taskId: string) {
   return useMutation({
     mutationFn: (input: { body: string; parentId?: string }) =>
       api.tasks.addComment(taskId, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
     onError: (error) => toast.error(error.message),
   });
 }
@@ -185,7 +193,8 @@ export function useDeleteComment(taskId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (commentId: string) => api.tasks.deleteComment(commentId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
     onError: (error) => toast.error(error.message),
   });
 }
@@ -193,8 +202,10 @@ export function useDeleteComment(taskId: string) {
 export function useAddResource(taskId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; url: string }) => api.tasks.addResource(taskId, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
+    mutationFn: (input: { name: string; url: string }) =>
+      api.tasks.addResource(taskId, input),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
     onError: (error) => toast.error(error.message),
   });
 }
@@ -203,7 +214,8 @@ export function useDeleteResource(taskId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (resourceId: string) => api.tasks.deleteResource(resourceId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) }),
     onError: (error) => toast.error(error.message),
   });
 }

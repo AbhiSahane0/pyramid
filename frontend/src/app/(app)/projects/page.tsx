@@ -69,7 +69,10 @@ export default function ProjectsPage() {
         <div className="flex flex-1 items-center justify-end gap-2">
           {searchOpen ? (
             <div className="relative w-full max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Search
+                className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 autoFocus
                 value={search}
@@ -124,7 +127,12 @@ export default function ProjectsPage() {
         ) : isError ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-sm text-muted-foreground">Couldn&apos;t load projects.</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="gap-1.5"
+            >
               <RotateCcw className="size-4" aria-hidden />
               Retry
             </Button>
@@ -181,7 +189,9 @@ export default function ProjectsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-sm">
-                      {project.dueDate ? format(new Date(project.dueDate), "dd MMM yyyy") : "—"}
+                      {project.dueDate
+                        ? format(new Date(project.dueDate), "dd MMM yyyy")
+                        : "—"}
                     </TableCell>
                     <TableCell className="pr-4 text-right">
                       <DropdownMenu>
@@ -196,7 +206,10 @@ export default function ProjectsPage() {
                             <MoreHorizontal className="size-4" aria-hidden />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-xl p-1.5">
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-40 rounded-xl p-1.5"
+                        >
                           <DropdownMenuItem
                             className="gap-2"
                             onClick={(event) => {
@@ -246,14 +259,22 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      <ProjectFormDialog open={dialogOpen} onOpenChange={setDialogOpen} project={editing} />
+      <ProjectFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        project={editing}
+      />
 
-      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(undefined)}>
+      <AlertDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(undefined)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this project?</AlertDialogTitle>
             <AlertDialogDescription>
-              &ldquo;{deleting?.name}&rdquo; and all of its tasks will be permanently removed.
+              &ldquo;{deleting?.name}&rdquo; and all of its tasks will be permanently
+              removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

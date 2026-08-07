@@ -32,7 +32,8 @@ interface RequestOptions {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     method: options.method ?? "GET",
-    headers: options.body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    headers:
+      options.body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     credentials: "include",
   });
@@ -71,8 +72,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 function query(params: Record<string, string | undefined>): string {
-  const entries = Object.entries(params).filter(
-    (pair): pair is [string, string] => Boolean(pair[1]),
+  const entries = Object.entries(params).filter((pair): pair is [string, string] =>
+    Boolean(pair[1]),
   );
   if (entries.length === 0) return "";
   return `?${new URLSearchParams(entries).toString()}`;
@@ -125,12 +126,15 @@ export const api = {
     members: () => request<User[]>("/users/members"),
     updateMe: (input: { name?: string; title?: string; username?: string }) =>
       request<User>("/users/me", { method: "PATCH", body: input }),
-    leaveWorkspace: () => request<{ success: boolean }>("/users/me", { method: "DELETE" }),
+    leaveWorkspace: () =>
+      request<{ success: boolean }>("/users/me", { method: "DELETE" }),
   },
   tasks: {
-    list: (filters: TaskFilters = {}) => request<Task[]>(`/tasks${query({ ...filters })}`),
+    list: (filters: TaskFilters = {}) =>
+      request<Task[]>(`/tasks${query({ ...filters })}`),
     get: (id: string) => request<TaskDetail>(`/tasks/${id}`),
-    create: (input: CreateTaskInput) => request<TaskDetail>("/tasks", { method: "POST", body: input }),
+    create: (input: CreateTaskInput) =>
+      request<TaskDetail>("/tasks", { method: "POST", body: input }),
     update: (id: string, input: UpdateTaskInput) =>
       request<TaskDetail>(`/tasks/${id}`, { method: "PATCH", body: input }),
     move: (id: string, input: { status: TaskStatus; position: number }) =>

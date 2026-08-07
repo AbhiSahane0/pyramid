@@ -22,16 +22,17 @@ export function PriorityIcon({
   }
   return (
     <span
-      className={cn("flex size-3.5 items-end justify-center gap-[1.5px]", textClass, className)}
+      className={cn(
+        "flex size-3.5 items-end justify-center gap-[1.5px]",
+        textClass,
+        className,
+      )}
       aria-hidden
     >
       {[1, 2, 3, 4].map((bar) => (
         <span
           key={bar}
-          className={cn(
-            "w-[2.5px] rounded-[1px] bg-current",
-            bar > bars && "opacity-25",
-          )}
+          className={cn("w-[2.5px] rounded-[1px] bg-current", bar > bars && "opacity-25")}
           style={{ height: `${3 + bar * 2.5}px` }}
         />
       ))}
@@ -49,7 +50,13 @@ export function PriorityBadge({
 }) {
   const meta = PRIORITY_META[priority];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-sm", meta.textClass, className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 text-sm",
+        meta.textClass,
+        className,
+      )}
+    >
       <PriorityIcon priority={priority} />
       {meta.label}
     </span>

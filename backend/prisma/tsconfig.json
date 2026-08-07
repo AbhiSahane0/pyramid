@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false,
+    "isolatedModules": false,
+    "noEmit": true
+  },
+  "include": ["./seed.ts", "../src/seed/demo-data.ts"]
+}

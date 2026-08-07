@@ -1,7 +1,13 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { MoreHorizontal, Paperclip, SendHorizontal, SmilePlus, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Paperclip,
+  SendHorizontal,
+  SmilePlus,
+  Trash2,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,8 +40,15 @@ function CommentInput({ placeholder, avatar, onSubmit, disabled }: CommentInputP
   };
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2">
-      <UserAvatar name={avatar.name} avatarUrl={avatar.avatarUrl} className="size-6 shrink-0" />
+    <form
+      onSubmit={submit}
+      className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2"
+    >
+      <UserAvatar
+        name={avatar.name}
+        avatarUrl={avatar.avatarUrl}
+        className="size-6 shrink-0"
+      />
       <Input
         value={value}
         onChange={(event) => setValue(event.target.value)}
@@ -74,7 +87,11 @@ function CommentCard({ comment, taskId }: { comment: Comment; taskId: string }) 
   return (
     <article className="space-y-3 rounded-xl border bg-card p-3.5">
       <header className="flex items-center gap-2">
-        <UserAvatar name={comment.author.name} avatarUrl={comment.author.avatarUrl} className="size-6" />
+        <UserAvatar
+          name={comment.author.name}
+          avatarUrl={comment.author.avatarUrl}
+          className="size-6"
+        />
         <span className="text-sm font-semibold">{comment.author.name}</span>
         <span className="text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
@@ -119,7 +136,11 @@ function CommentCard({ comment, taskId }: { comment: Comment; taskId: string }) 
           {comment.replies.map((reply) => (
             <div key={reply.id} className="space-y-1">
               <div className="flex items-center gap-2">
-                <UserAvatar name={reply.author.name} avatarUrl={reply.author.avatarUrl} className="size-5" />
+                <UserAvatar
+                  name={reply.author.name}
+                  avatarUrl={reply.author.avatarUrl}
+                  className="size-5"
+                />
                 <span className="text-xs font-semibold">{reply.author.name}</span>
                 <span className="text-[0.65rem] text-muted-foreground">
                   {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
@@ -141,7 +162,13 @@ function CommentCard({ comment, taskId }: { comment: Comment; taskId: string }) 
   );
 }
 
-export function CommentsSection({ taskId, comments }: { taskId: string; comments: Comment[] }) {
+export function CommentsSection({
+  taskId,
+  comments,
+}: {
+  taskId: string;
+  comments: Comment[];
+}) {
   const { data: me } = useMe();
   const addComment = useAddComment(taskId);
 

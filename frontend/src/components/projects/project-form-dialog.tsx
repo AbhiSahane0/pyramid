@@ -53,7 +53,11 @@ interface ProjectFormDialogProps {
   project?: Project;
 }
 
-export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDialogProps) {
+export function ProjectFormDialog({
+  open,
+  onOpenChange,
+  project,
+}: ProjectFormDialogProps) {
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const { data: members = [] } = useMembers();
@@ -71,7 +75,9 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
         ? {
             name: project.name,
             priority: project.priority,
-            dueDate: project.dueDate ? format(new Date(project.dueDate), "yyyy-MM-dd") : null,
+            dueDate: project.dueDate
+              ? format(new Date(project.dueDate), "yyyy-MM-dd")
+              : null,
             leadId: project.leadId,
           }
         : { name: "", priority: "NO_PRIORITY", dueDate: null, leadId: null },
@@ -101,7 +107,9 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit project" : "Add project"}</DialogTitle>
           <DialogDescription>
-            {isEdit ? "Update the project details." : "Group related tasks under a project."}
+            {isEdit
+              ? "Update the project details."
+              : "Group related tasks under a project."}
           </DialogDescription>
         </DialogHeader>
 
@@ -131,7 +139,12 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                     onChange={field.onChange}
                     align="start"
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <PriorityIcon priority={field.value} />
                         {PRIORITY_META[field.value].label}
                       </Button>
@@ -147,9 +160,16 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                     value={field.value}
                     onChange={field.onChange}
                     trigger={
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                      >
                         <CalendarIcon className="size-3.5" aria-hidden />
-                        {field.value ? format(new Date(field.value), "MMM d, yyyy") : "Due date"}
+                        {field.value
+                          ? format(new Date(field.value), "MMM d, yyyy")
+                          : "Due date"}
                       </Button>
                     }
                   />
@@ -163,16 +183,28 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                   return (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5"
+                        >
                           {lead ? (
-                            <UserAvatar name={lead.name} avatarUrl={lead.avatarUrl} className="size-5" />
+                            <UserAvatar
+                              name={lead.name}
+                              avatarUrl={lead.avatarUrl}
+                              className="size-5"
+                            />
                           ) : (
                             <User className="size-3.5" aria-hidden />
                           )}
                           {lead?.name ?? "Lead"}
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="max-h-72 w-52 overflow-y-auto rounded-xl p-1.5">
+                      <DropdownMenuContent
+                        align="start"
+                        className="max-h-72 w-52 overflow-y-auto rounded-xl p-1.5"
+                      >
                         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                           Project lead
                         </DropdownMenuLabel>
@@ -184,7 +216,11 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                               field.onChange(field.value === member.id ? null : member.id)
                             }
                           >
-                            <UserAvatar name={member.name} avatarUrl={member.avatarUrl} className="size-5" />
+                            <UserAvatar
+                              name={member.name}
+                              avatarUrl={member.avatarUrl}
+                              className="size-5"
+                            />
                             {member.name}
                             {field.value === member.id ? (
                               <Check className="ml-auto size-4" aria-hidden />
@@ -199,7 +235,12 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                disabled={submitting}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>

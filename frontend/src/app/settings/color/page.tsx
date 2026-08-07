@@ -40,7 +40,9 @@ export default function ColorSettingsPage() {
               aria-pressed={selected}
               className={cn(
                 "flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-sm font-medium capitalize transition-colors",
-                selected ? "border-primary" : "border-border hover:border-muted-foreground/40",
+                selected
+                  ? "border-primary"
+                  : "border-border hover:border-muted-foreground/40",
               )}
             >
               <span className={cn("size-6 rounded-lg", SWATCHES[mode])} aria-hidden />

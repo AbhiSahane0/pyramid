@@ -2,11 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Member } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +15,12 @@ interface MemberAvatarsProps {
 }
 
 /** Overlapping avatar stack with an optional add button. */
-export function MemberAvatars({ members, max = 3, onAdd, className }: MemberAvatarsProps) {
+export function MemberAvatars({
+  members,
+  max = 3,
+  onAdd,
+  className,
+}: MemberAvatarsProps) {
   const shown = members.slice(0, max);
   const extra = members.length - shown.length;
 

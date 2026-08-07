@@ -112,17 +112,9 @@ export interface TaskFilters {
 
 // --- Display metadata shared across the UI ---
 
-export const STATUS_ORDER: TaskStatus[] = [
-  "TODO",
-  "DOING",
-  "COMPLETED",
-  "ON_HOLD",
-];
+export const STATUS_ORDER: TaskStatus[] = ["TODO", "DOING", "COMPLETED", "ON_HOLD"];
 
-export const STATUS_META: Record<
-  TaskStatus,
-  { label: string; dotClass: string }
-> = {
+export const STATUS_META: Record<TaskStatus, { label: string; dotClass: string }> = {
   BACKLOG: { label: "Backlog", dotClass: "bg-amber-500" },
   TODO: { label: "To Do", dotClass: "bg-slate-400" },
   DOING: { label: "Doing", dotClass: "bg-blue-500" },

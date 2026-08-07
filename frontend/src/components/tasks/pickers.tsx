@@ -22,15 +22,15 @@ import {
 import { cn } from "@/lib/utils";
 import { PriorityIcon } from "./priority-badge";
 
-const STATUS_OPTIONS: TaskStatus[] = [
-  "BACKLOG",
-  "TODO",
-  "DOING",
-  "COMPLETED",
-  "ON_HOLD",
-];
+const STATUS_OPTIONS: TaskStatus[] = ["BACKLOG", "TODO", "DOING", "COMPLETED", "ON_HOLD"];
 
-export function StatusDot({ status, className }: { status: TaskStatus; className?: string }) {
+export function StatusDot({
+  status,
+  className,
+}: {
+  status: TaskStatus;
+  className?: string;
+}) {
   return (
     <span
       className={cn("size-2 rounded-full", STATUS_META[status].dotClass, className)}
@@ -46,7 +46,12 @@ interface PickerProps<T> {
   align?: "start" | "end";
 }
 
-export function StatusPicker({ value, onChange, trigger, align = "end" }: PickerProps<TaskStatus>) {
+export function StatusPicker({
+  value,
+  onChange,
+  trigger,
+  align = "end",
+}: PickerProps<TaskStatus>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
@@ -55,7 +60,11 @@ export function StatusPicker({ value, onChange, trigger, align = "end" }: Picker
           Status
         </DropdownMenuLabel>
         {STATUS_OPTIONS.map((status) => (
-          <DropdownMenuItem key={status} onClick={() => onChange(status)} className="gap-2">
+          <DropdownMenuItem
+            key={status}
+            onClick={() => onChange(status)}
+            className="gap-2"
+          >
             <StatusDot status={status} />
             {STATUS_META[status].label}
             {value === status ? <Check className="ml-auto size-4" aria-hidden /> : null}
@@ -66,7 +75,12 @@ export function StatusPicker({ value, onChange, trigger, align = "end" }: Picker
   );
 }
 
-export function PriorityPicker({ value, onChange, trigger, align = "end" }: PickerProps<Priority>) {
+export function PriorityPicker({
+  value,
+  onChange,
+  trigger,
+  align = "end",
+}: PickerProps<Priority>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
@@ -99,7 +113,12 @@ interface MultiPickerProps {
   align?: "start" | "end";
 }
 
-export function MemberPicker({ value, onChange, trigger, align = "end" }: MultiPickerProps) {
+export function MemberPicker({
+  value,
+  onChange,
+  trigger,
+  align = "end",
+}: MultiPickerProps) {
   const { data: members = [] } = useMembers();
 
   const toggle = (id: string) => {
@@ -109,7 +128,10 @@ export function MemberPicker({ value, onChange, trigger, align = "end" }: MultiP
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="max-h-80 w-56 overflow-y-auto rounded-xl p-1.5">
+      <DropdownMenuContent
+        align={align}
+        className="max-h-80 w-56 overflow-y-auto rounded-xl p-1.5"
+      >
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           Members
         </DropdownMenuLabel>
@@ -121,7 +143,11 @@ export function MemberPicker({ value, onChange, trigger, align = "end" }: MultiP
             onSelect={(event) => event.preventDefault()}
             className="gap-2"
           >
-            <UserAvatar name={member.name} avatarUrl={member.avatarUrl} className="size-5" />
+            <UserAvatar
+              name={member.name}
+              avatarUrl={member.avatarUrl}
+              className="size-5"
+            />
             {member.name}
           </DropdownMenuCheckboxItem>
         ))}
@@ -130,7 +156,12 @@ export function MemberPicker({ value, onChange, trigger, align = "end" }: MultiP
   );
 }
 
-export function LabelPicker({ value, onChange, trigger, align = "end" }: MultiPickerProps) {
+export function LabelPicker({
+  value,
+  onChange,
+  trigger,
+  align = "end",
+}: MultiPickerProps) {
   const { data: labels = [] } = useLabels();
 
   const toggle = (id: string) => {
@@ -140,7 +171,10 @@ export function LabelPicker({ value, onChange, trigger, align = "end" }: MultiPi
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="max-h-80 w-52 overflow-y-auto rounded-xl p-1.5">
+      <DropdownMenuContent
+        align={align}
+        className="max-h-80 w-52 overflow-y-auto rounded-xl p-1.5"
+      >
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           Labels
         </DropdownMenuLabel>

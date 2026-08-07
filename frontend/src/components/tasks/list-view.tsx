@@ -3,7 +3,11 @@
 import { format } from "date-fns";
 import { ChevronDown, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Table,
   TableBody,
@@ -13,12 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ViewPrefs } from "@/hooks/use-view-prefs";
-import {
-  STATUS_META,
-  STATUS_ORDER,
-  type Task,
-  type TaskStatus,
-} from "@/lib/types";
+import { STATUS_META, STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
 import { LabelBadge } from "./label-badge";
 import { MemberAvatars } from "./member-avatars";
 import { PriorityBadge } from "./priority-badge";
@@ -71,12 +70,24 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="min-w-56 pl-4">Task</TableHead>
-                    {fields.priority ? <TableHead className="w-32">Priority</TableHead> : null}
-                    {fields.members ? <TableHead className="w-28">Members</TableHead> : null}
-                    {fields.dueDate ? <TableHead className="w-36">Due Date</TableHead> : null}
-                    {fields.labels ? <TableHead className="w-44">Labels</TableHead> : null}
-                    {fields.status ? <TableHead className="w-32">Status</TableHead> : null}
-                    {fields.reporter ? <TableHead className="w-32">Reporter</TableHead> : null}
+                    {fields.priority ? (
+                      <TableHead className="w-32">Priority</TableHead>
+                    ) : null}
+                    {fields.members ? (
+                      <TableHead className="w-28">Members</TableHead>
+                    ) : null}
+                    {fields.dueDate ? (
+                      <TableHead className="w-36">Due Date</TableHead>
+                    ) : null}
+                    {fields.labels ? (
+                      <TableHead className="w-44">Labels</TableHead>
+                    ) : null}
+                    {fields.status ? (
+                      <TableHead className="w-32">Status</TableHead>
+                    ) : null}
+                    {fields.reporter ? (
+                      <TableHead className="w-32">Reporter</TableHead>
+                    ) : null}
                     <TableHead className="w-20 pr-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -95,12 +106,17 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
                       ) : null}
                       {fields.members ? (
                         <TableCell>
-                          <MemberAvatars members={task.members} onAdd={() => router.push(`/tasks/${task.id}`)} />
+                          <MemberAvatars
+                            members={task.members}
+                            onAdd={() => router.push(`/tasks/${task.id}`)}
+                          />
                         </TableCell>
                       ) : null}
                       {fields.dueDate ? (
                         <TableCell className="text-sm">
-                          {task.dueDate ? format(new Date(task.dueDate), "dd MMM yyyy") : "—"}
+                          {task.dueDate
+                            ? format(new Date(task.dueDate), "dd MMM yyyy")
+                            : "—"}
                         </TableCell>
                       ) : null}
                       {fields.labels ? (

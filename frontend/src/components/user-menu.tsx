@@ -66,17 +66,11 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton size="lg" className="gap-2.5">
           <UserAvatar name={name} avatarUrl={user?.avatarUrl} className="size-8" />
-          <span className="flex-1 truncate text-left text-sm font-semibold">
-            {name}
-          </span>
+          <span className="flex-1 truncate text-left text-sm font-semibold">{name}</span>
           <ChevronsUpDown className="size-4 text-muted-foreground" aria-hidden />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        sideOffset={6}
-        className="w-64 rounded-xl p-2"
-      >
+      <DropdownMenuContent align="start" sideOffset={6} className="w-64 rounded-xl p-2">
         <div className="mb-2 flex flex-col items-center gap-1.5 rounded-lg border bg-card px-4 py-4 shadow-xs">
           <UserAvatar name={name} avatarUrl={user?.avatarUrl} className="size-12" />
           <div className="text-center">
@@ -102,12 +96,16 @@ export function UserMenu() {
               <DropdownMenuItem onClick={() => setTheme("light")} className="gap-2">
                 <Sun className="size-4" aria-hidden />
                 Light
-                {mounted && theme === "light" ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                {mounted && theme === "light" ? (
+                  <Check className="ml-auto size-4" aria-hidden />
+                ) : null}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("dark")} className="gap-2">
                 <Moon className="size-4" aria-hidden />
                 Dark
-                {mounted && theme === "dark" ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                {mounted && theme === "dark" ? (
+                  <Check className="ml-auto size-4" aria-hidden />
+                ) : null}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
@@ -140,10 +138,15 @@ export function UserMenu() {
                   {mode === "black" ? (
                     <Square className="size-4 opacity-0" aria-hidden />
                   ) : (
-                    <span className={cn("size-4 rounded-[5px]", COLOR_SWATCHES[mode])} aria-hidden />
+                    <span
+                      className={cn("size-4 rounded-[5px]", COLOR_SWATCHES[mode])}
+                      aria-hidden
+                    />
                   )}
                   {colorModeLabel(mode)}
-                  {colorMode === mode ? <Check className="ml-auto size-4" aria-hidden /> : null}
+                  {colorMode === mode ? (
+                    <Check className="ml-auto size-4" aria-hidden />
+                  ) : null}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuSubContent>

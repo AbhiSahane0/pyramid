@@ -18,12 +18,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useMoveTask } from "@/hooks/use-api";
 import type { ViewPrefs } from "@/hooks/use-view-prefs";
-import {
-  STATUS_META,
-  STATUS_ORDER,
-  type Task,
-  type TaskStatus,
-} from "@/lib/types";
+import { STATUS_META, STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { TaskCard } from "./task-card";
 

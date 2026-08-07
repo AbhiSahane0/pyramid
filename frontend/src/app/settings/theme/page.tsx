@@ -34,7 +34,9 @@ export default function ThemeSettingsPage() {
               aria-pressed={selected}
               className={cn(
                 "rounded-xl border-2 p-1 text-left transition-colors",
-                selected ? "border-primary" : "border-border hover:border-muted-foreground/40",
+                selected
+                  ? "border-primary"
+                  : "border-border hover:border-muted-foreground/40",
               )}
             >
               <span

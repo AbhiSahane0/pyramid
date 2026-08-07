@@ -15,7 +15,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const NAV_ITEMS = [
   { title: "Tasks", href: "/tasks", icon: LayoutGrid },
@@ -37,7 +41,10 @@ export function AppSidebar() {
       <SidebarContent className="px-3">
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
-            <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground hover:bg-sidebar-accent">
+            <SidebarGroupLabel
+              asChild
+              className="text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+            >
               <CollapsibleTrigger>
                 Workspace
                 <ChevronDown

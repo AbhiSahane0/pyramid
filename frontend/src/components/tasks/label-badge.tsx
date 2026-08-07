@@ -3,13 +3,7 @@ import type { Label } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** Tag chip used on cards and the task detail labels row. */
-export function LabelBadge({
-  label,
-  className,
-}: {
-  label: Label;
-  className?: string;
-}) {
+export function LabelBadge({ label, className }: { label: Label; className?: string }) {
   return (
     <span
       className={cn(
