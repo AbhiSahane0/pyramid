@@ -63,8 +63,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (await refreshSession()) {
       return request<T>(path, { ...options, _retried: true });
     }
-    // Session fully expired — leave the SPA for a clean login page load.
+    // Session fully expired. Clear the dead cookies first — otherwise the
+    // route-protection proxy still sees a refresh cookie and would bounce
+    // /login straight back here in a redirect loop.
     if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(
+        () => undefined,
+      );
       window.location.assign(new URL("/login", window.location.origin).toString());
     }
   }
