@@ -19,13 +19,13 @@ const memberSelect = {
 const listInclude = {
   members: memberSelect,
   labels: true,
+  reporter: memberSelect,
   project: { select: { id: true, name: true } },
   _count: { select: { subtasks: true, comments: true } },
 } satisfies Prisma.TaskInclude;
 
 const detailInclude = {
   ...listInclude,
-  reporter: memberSelect,
   parent: { select: { id: true, title: true } },
   subtasks: {
     include: { members: memberSelect, labels: true },

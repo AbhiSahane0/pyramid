@@ -58,6 +58,7 @@ export interface Task {
   updatedAt: string;
   members: Member[];
   labels: Label[];
+  reporter: Member | null;
   project: { id: string; name: string } | null;
   _count: { subtasks: number; comments: number };
 }
@@ -92,7 +93,6 @@ export interface Resource {
 }
 
 export interface TaskDetail extends Task {
-  reporter: Member | null;
   parent: { id: string; title: string } | null;
   subtasks: Task[];
   comments: Comment[];
