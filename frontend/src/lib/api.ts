@@ -29,6 +29,26 @@ interface RequestOptions {
   _retried?: boolean;
 }
 
+/**
+ * Single-flight token refresh: concurrent 401s share one /auth/refresh call.
+ * Without this, parallel queries would race — the first rotation succeeds and
+ * the second presents the stale token, tripping the server's reuse detection.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= fetch("/api/auth/refresh", {
+    method: "POST",
+    credentials: "include",
+  })
+    .then((response) => response.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     method: options.method ?? "GET",
@@ -38,13 +58,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     credentials: "include",
   });
 
-  // Access token expired: refresh once, then retry the original request.
+  // Access token expired: refresh once (shared across callers), then retry.
   if (response.status === 401 && !options._retried && path !== "/auth/refresh") {
-    const refreshed = await fetch("/api/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-    });
-    if (refreshed.ok) {
+    if (await refreshSession()) {
       return request<T>(path, { ...options, _retried: true });
     }
     // Session fully expired — leave the SPA for a clean login page load.

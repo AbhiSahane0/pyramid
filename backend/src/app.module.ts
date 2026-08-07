@@ -13,7 +13,9 @@ import { UsersModule } from './users/users.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // Generous ceiling: the SPA fires several queries per navigation, so this
+    // is abuse protection rather than traffic shaping.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     PrismaModule,
     SeedModule,
     AuthModule,
