@@ -2,7 +2,7 @@
 
 import { Check, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
 
 const OPTIONS = [
@@ -12,9 +12,7 @@ const OPTIONS = [
 
 export default function ThemeSettingsPage() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   return (
     <div className="space-y-6">

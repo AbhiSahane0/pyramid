@@ -34,11 +34,15 @@ export function useViewPrefs(storageKey: string) {
   const [prefs, setPrefs] = useState<ViewPrefs>(DEFAULT_PREFS);
   const [hydrated, setHydrated] = useState(false);
 
+  // One-time hydration read: localStorage is only available on the client, so
+  // the stored preferences are applied right after mount. The sync setState is
+  // intentional — it must land before the first paint of the view toggle.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<ViewPrefs>;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPrefs({
           mode: parsed.mode === "list" ? "list" : "board",
           fields: { ...DEFAULT_PREFS.fields, ...parsed.fields },

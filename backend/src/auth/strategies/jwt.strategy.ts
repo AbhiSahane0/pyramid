@@ -24,13 +24,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  /** Resolves the JWT to a live user row so revoked/deleted users get 401s. */
+  /**
+   * Resolves the JWT to a live user row so deleted users get 401s. A null
+   * refresh-token hash means the session was revoked (logout / reuse
+   * detection) — access tokens die with it instead of living out their TTL.
+   */
   async validate(payload: JwtPayload): Promise<User> {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });
-    if (!user) {
-      throw new UnauthorizedException('User no longer exists');
+    if (!user || !user.hashedRefreshToken) {
+      throw new UnauthorizedException('Session is no longer active');
     }
     return user;
   }

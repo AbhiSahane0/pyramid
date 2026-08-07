@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMounted } from "@/hooks/use-mounted";
 import {
   COLOR_MODES,
   useColorMode,
@@ -56,9 +56,7 @@ export function UserMenu() {
   const { theme, setTheme } = useTheme();
   const { colorMode, setColorMode } = useColorMode();
   const logout = useLogout();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const name = user?.name ?? "Workspace";
   const email = user?.email ?? "";

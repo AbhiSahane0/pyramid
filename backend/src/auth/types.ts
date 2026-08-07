@@ -3,6 +3,8 @@ export interface JwtPayload {
   sub: string;
   email: string;
   isGuest: boolean;
+  /** Unique token id — guarantees rotation always produces a new token. */
+  jti?: string;
 }
 
 /** Normalized profile extracted from Google's OAuth response. */

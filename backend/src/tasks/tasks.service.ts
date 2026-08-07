@@ -192,14 +192,15 @@ export class TasksService {
       );
     }
 
-    const task = await this.prisma.task.update({
+    // Log before fetching the updated detail so the response includes the
+    // fresh activity entries.
+    await this.logChanges(existing, dto, ownerId);
+
+    return this.prisma.task.update({
       where: { id },
       data,
       include: detailInclude,
     });
-
-    await this.logChanges(existing, dto, ownerId);
-    return task;
   }
 
   async move(ownerId: string, id: string, dto: MoveTaskDto): Promise<Task> {

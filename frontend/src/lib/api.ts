@@ -46,8 +46,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (refreshed.ok) {
       return request<T>(path, { ...options, _retried: true });
     }
+    // Session fully expired — leave the SPA for a clean login page load.
     if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-      window.location.assign("/login");
+      window.location.assign(new URL("/login", window.location.origin).toString());
     }
   }
 

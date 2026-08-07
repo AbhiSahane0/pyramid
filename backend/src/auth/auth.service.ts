@@ -78,19 +78,25 @@ export class AuthService {
 
   /** Signs a new access/refresh pair and stores the refresh token hash (rotation). */
   async issueTokens(user: User): Promise<TokenPair> {
-    const payload: JwtPayload = {
+    const basePayload = {
       sub: user.id,
       email: user.email,
       isGuest: user.isGuest,
     };
-    const accessToken = this.jwt.sign(payload, {
-      secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-      expiresIn: ttlToMs(this.accessTtl) / 1000,
-    });
-    const refreshToken = this.jwt.sign(payload, {
-      secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
-      expiresIn: ttlToMs(this.refreshTtl) / 1000,
-    });
+    const accessToken = this.jwt.sign(
+      { ...basePayload, jti: randomUUID() } satisfies JwtPayload,
+      {
+        secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: ttlToMs(this.accessTtl) / 1000,
+      },
+    );
+    const refreshToken = this.jwt.sign(
+      { ...basePayload, jti: randomUUID() } satisfies JwtPayload,
+      {
+        secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        expiresIn: ttlToMs(this.refreshTtl) / 1000,
+      },
+    );
     await this.prisma.user.update({
       where: { id: user.id },
       data: { hashedRefreshToken: this.hash(refreshToken) },

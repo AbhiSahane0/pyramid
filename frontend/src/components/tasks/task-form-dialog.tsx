@@ -38,7 +38,6 @@ import { useCreateTask, useUpdateTask } from "@/hooks/use-api";
 import {
   PRIORITY_META,
   STATUS_META,
-  type Priority,
   type Task,
   type TaskStatus,
 } from "@/lib/types";
