@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { AuthService } from '../src/auth/auth.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 /**
@@ -13,6 +14,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 describe('Pyramid API (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
+  let authService: AuthService;
   let cookies: string[];
   let createdTaskId: string;
 
@@ -28,6 +30,7 @@ describe('Pyramid API (e2e)', () => {
     configureApp(app);
     await app.init();
     prisma = app.get(PrismaService);
+    authService = app.get(AuthService);
   });
 
   afterAll(async () => {
@@ -67,6 +70,31 @@ describe('Pyramid API (e2e)', () => {
     expect(projects.body.map((p: { name: string }) => p.name)).toEqual(
       expect.arrayContaining(['Design Homepage', 'Develop Login Feature']),
     );
+  });
+
+  it('starts real (Google) accounts with an empty workspace', async () => {
+    const profile = {
+      googleId: `e2e-google-${Date.now()}`,
+      email: `e2e-google-${Date.now()}@example.com`,
+      name: 'E2E Google User',
+      avatarUrl: null,
+    };
+    const user = await authService.loginWithGoogle(profile);
+    try {
+      expect(user.isGuest).toBe(false);
+      const [tasks, projects] = await Promise.all([
+        prisma.task.count({ where: { ownerId: user.id } }),
+        prisma.project.count({ where: { ownerId: user.id } }),
+      ]);
+      expect(tasks).toBe(0);
+      expect(projects).toBe(0);
+
+      // …but the shared member/label catalogue is still available to them.
+      expect(await prisma.label.count()).toBeGreaterThan(0);
+      expect(await prisma.user.count({ where: { isDemo: true } })).toBeGreaterThan(0);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
   });
 
   it('validates task input', async () => {

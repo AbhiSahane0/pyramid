@@ -21,7 +21,10 @@ export class AuthService {
     private readonly workspaceSeed: WorkspaceSeedService,
   ) {}
 
-  /** Finds or creates the user for a Google profile. New users get a demo workspace. */
+  /**
+   * Finds or creates the user for a Google profile. Real accounts start with
+   * an empty workspace — only guest sessions get demo content.
+   */
   async loginWithGoogle(profile: GoogleUser): Promise<User> {
     const existingByGoogleId = await this.prisma.user.findUnique({
       where: { googleId: profile.googleId },
@@ -48,7 +51,11 @@ export class AuthService {
       });
     }
 
-    const user = await this.prisma.user.create({
+    // Real accounts start empty: the app's own empty states guide the user
+    // into creating their first project/task. Only the shared member and
+    // label catalogue is ensured so pickers are populated.
+    await this.workspaceSeed.seedGlobals();
+    return this.prisma.user.create({
       data: {
         googleId: profile.googleId,
         email: profile.email,
@@ -57,8 +64,6 @@ export class AuthService {
         username: profile.email.split('@')[0],
       },
     });
-    await this.workspaceSeed.seedForUser(user.id);
-    return user;
   }
 
   /** Creates a temporary, clearly-flagged guest user with its own demo workspace. */
