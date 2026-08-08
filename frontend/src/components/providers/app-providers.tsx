@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState, type ReactNode } from "react";
+import { TourProvider } from "@/components/onboarding/use-tour";
 import { Toaster } from "@/components/ui/sonner";
 import { ColorModeProvider } from "./color-mode-provider";
 
@@ -29,8 +30,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
         disableTransitionOnChange
       >
         <ColorModeProvider>
-          {children}
-          <Toaster position="bottom-right" />
+          <TourProvider>
+            {children}
+            <Toaster position="bottom-right" />
+          </TourProvider>
         </ColorModeProvider>
       </ThemeProvider>
     </QueryClientProvider>

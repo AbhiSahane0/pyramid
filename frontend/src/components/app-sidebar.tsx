@@ -1,12 +1,14 @@
 "use client";
 
-import { ChevronDown, LayoutGrid, Package } from "lucide-react";
+import { ChevronDown, LayoutGrid, Package, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,6 +17,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useMe } from "@/hooks/use-api";
+import { api } from "@/lib/api";
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,12 +32,13 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { data: user } = useMe();
 
   return (
     <Sidebar>
       <SidebarHeader className="px-3 pt-3">
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem data-tour="user-menu">
             <UserMenu />
           </SidebarMenuItem>
         </SidebarMenu>
@@ -55,7 +60,7 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <CollapsibleContent>
               <SidebarGroupContent className="pt-1">
-                <SidebarMenu>
+                <SidebarMenu data-tour="sidebar-nav">
                   {NAV_ITEMS.map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -76,6 +81,27 @@ export function AppSidebar() {
           </SidebarGroup>
         </Collapsible>
       </SidebarContent>
+      {user?.isGuest ? (
+        <SidebarFooter className="px-3 pb-3">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold">
+              <TriangleAlert className="size-3.5 text-amber-600" aria-hidden />
+              Guest workspace
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              This demo workspace is temporary. Sign in with Google to keep your work.
+            </p>
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="mt-2 h-7 w-full text-xs"
+            >
+              <a href={api.auth.googleLoginUrl}>Sign in with Google</a>
+            </Button>
+          </div>
+        </SidebarFooter>
+      ) : null}
     </Sidebar>
   );
 }
