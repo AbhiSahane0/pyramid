@@ -46,7 +46,7 @@ npm install
 npm run dev
 ```
 
-Sign in with **Continue as Guest** — a fresh, isolated demo workspace matching the Figma content is created on every first login (guest or Google), so the app immediately looks like the design.
+Then open http://localhost:3000 and choose **Continue as Guest** — that creates an isolated demo workspace matching the Figma content, so the app looks like the design straight away. (Google sign-in starts you empty; see *Guest vs. real accounts* above.)
 
 ### Tests
 
@@ -54,7 +54,7 @@ Sign in with **Continue as Guest** — a fresh, isolated demo workspace matching
 cd backend && npm run test:e2e   # requires the docker Postgres to be up
 ```
 
-The e2e suite covers guest auth, cookie issuance, demo seeding, DTO validation, task CRUD/move, cross-tenant isolation (user B gets 404s for user A's tasks), refresh-token rotation with reuse detection, and logout revocation.
+The e2e suite covers guest auth, cookie issuance, demo seeding for guests, empty workspaces for Google accounts, DTO validation, task CRUD/move, cross-tenant isolation (user B gets 404s for user A's tasks), refresh-token rotation with reuse detection, and logout revocation.
 
 ---
 
