@@ -91,7 +91,9 @@ describe('Pyramid API (e2e)', () => {
 
       // …but the shared member/label catalogue is still available to them.
       expect(await prisma.label.count()).toBeGreaterThan(0);
-      expect(await prisma.user.count({ where: { isDemo: true } })).toBeGreaterThan(0);
+      expect(
+        await prisma.user.count({ where: { isDemo: true } }),
+      ).toBeGreaterThan(0);
     } finally {
       await prisma.user.delete({ where: { id: user.id } });
     }
