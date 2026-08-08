@@ -8,12 +8,14 @@ import {
   Plus,
   RotateCcw,
   Search,
+  SearchX,
   Trash2,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
+import { EmptyState } from "@/components/tasks/empty-state";
 import { MemberAvatars } from "@/components/tasks/member-avatars";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import {
@@ -121,41 +123,53 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-8 sm:px-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 sm:px-6">
         {isPending ? (
           <Skeleton className="h-56 w-full rounded-xl" />
         ) : isError ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <p className="text-sm text-muted-foreground">Couldn&apos;t load projects.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="gap-1.5"
-            >
-              <RotateCcw className="size-4" aria-hidden />
-              Retry
-            </Button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <FolderKanban className="size-8 text-muted-foreground" aria-hidden />
-            <div>
-              <p className="font-medium">
-                {search ? "No matching projects" : "No projects yet"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {search
-                  ? "Try a different search."
-                  : "Create a project to group related tasks."}
-              </p>
-            </div>
-            {!search ? (
-              <Button size="sm" onClick={() => setDialogOpen(true)}>
-                Add Project
+          <EmptyState
+            icon={RotateCcw}
+            title="Couldn't load projects"
+            description="Something went wrong reaching the server. Please try again."
+            action={
+              <Button
+                variant="outline"
+                onClick={() => void refetch()}
+                className="gap-1.5"
+              >
+                <RotateCcw className="size-4" aria-hidden />
+                Try again
               </Button>
-            ) : null}
-          </div>
+            }
+          />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={search ? SearchX : FolderKanban}
+            title={search ? "No matching projects" : "No projects yet"}
+            description={
+              search
+                ? `Nothing matches \u201c${search}\u201d. Try a different name.`
+                : "Projects group related tasks together \u2014 create one to organise your work."
+            }
+            action={
+              search ? (
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  Clear search
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setEditing(undefined);
+                    setDialogOpen(true);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Create your first project
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="overflow-x-auto rounded-xl border">
             <Table>
@@ -175,7 +189,17 @@ export default function ProjectsPage() {
                     className="cursor-pointer"
                     onClick={() => router.push(`/projects/${project.id}`)}
                   >
-                    <TableCell className="pl-4 font-medium">{project.name}</TableCell>
+                    <TableCell className="max-w-0 pl-4 font-medium">
+                      <span className="flex items-center gap-2">
+                        <span className="truncate" title={project.name}>
+                          {project.name}
+                        </span>
+                        <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                          {project._count.tasks}{" "}
+                          {project._count.tasks === 1 ? "task" : "tasks"}
+                        </span>
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <PriorityBadge priority={project.priority} />
                     </TableCell>

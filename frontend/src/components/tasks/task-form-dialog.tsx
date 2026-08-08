@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, Tag, Users } from "lucide-react";
+import { CalendarIcon, Loader2, Tag, Users } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -313,7 +313,10 @@ export function TaskFormDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="gap-1.5">
+                {submitting ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {isEdit ? "Save changes" : "Create task"}
               </Button>
             </DialogFooter>
