@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { STATUS_ORDER, type TaskStatus } from "@/lib/types";
 
 export type ViewMode = "list" | "board";
 
@@ -10,6 +11,10 @@ export type TaskField =
 export interface ViewPrefs {
   mode: ViewMode;
   fields: Record<TaskField, boolean>;
+  /** Board column order (drag the column handle to rearrange). */
+  columnOrder: TaskStatus[];
+  /** Columns collapsed to a narrow strip. */
+  collapsedColumns: TaskStatus[];
 }
 
 const DEFAULT_PREFS: ViewPrefs = {
@@ -22,9 +27,22 @@ const DEFAULT_PREFS: ViewPrefs = {
     status: false,
     reporter: false,
   },
+  columnOrder: STATUS_ORDER,
+  collapsedColumns: [],
 };
 
-/** View mode + visible fields (the "Fields" dropdown), persisted per surface. */
+/** Drops unknown/duplicate statuses and appends any column missing from storage. */
+function normalizeColumnOrder(stored: unknown): TaskStatus[] {
+  if (!Array.isArray(stored)) return STATUS_ORDER;
+  const valid = stored.filter(
+    (status, index): status is TaskStatus =>
+      STATUS_ORDER.includes(status as TaskStatus) && stored.indexOf(status) === index,
+  );
+  const missing = STATUS_ORDER.filter((status) => !valid.includes(status));
+  return [...valid, ...missing];
+}
+
+/** View mode, visible fields and board layout — persisted per surface. */
 export function useViewPrefs(storageKey: string) {
   const [prefs, setPrefs] = useState<ViewPrefs>(DEFAULT_PREFS);
   const [hydrated, setHydrated] = useState(false);
@@ -41,6 +59,12 @@ export function useViewPrefs(storageKey: string) {
         setPrefs({
           mode: parsed.mode === "list" ? "list" : "board",
           fields: { ...DEFAULT_PREFS.fields, ...parsed.fields },
+          columnOrder: normalizeColumnOrder(parsed.columnOrder),
+          collapsedColumns: Array.isArray(parsed.collapsedColumns)
+            ? parsed.collapsedColumns.filter((status): status is TaskStatus =>
+                STATUS_ORDER.includes(status as TaskStatus),
+              )
+            : [],
         });
       }
     } catch {
@@ -54,7 +78,11 @@ export function useViewPrefs(storageKey: string) {
       setPrefs((current) => {
         const merged =
           typeof next === "function" ? next(current) : { ...current, ...next };
-        window.localStorage.setItem(storageKey, JSON.stringify(merged));
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(merged));
+        } catch {
+          // Storage full or blocked (private mode) — keep the in-memory value.
+        }
         return merged;
       });
     },
@@ -72,5 +100,34 @@ export function useViewPrefs(storageKey: string) {
     [update],
   );
 
-  return { prefs, hydrated, setMode, toggleField };
+  const setColumnOrder = useCallback(
+    (columnOrder: TaskStatus[]) => update({ columnOrder }),
+    [update],
+  );
+
+  const toggleColumnCollapsed = useCallback(
+    (status: TaskStatus) =>
+      update((current) => ({
+        ...current,
+        collapsedColumns: current.collapsedColumns.includes(status)
+          ? current.collapsedColumns.filter((s) => s !== status)
+          : [...current.collapsedColumns, status],
+      })),
+    [update],
+  );
+
+  const resetLayout = useCallback(
+    () => update({ columnOrder: STATUS_ORDER, collapsedColumns: [] }),
+    [update],
+  );
+
+  return {
+    prefs,
+    hydrated,
+    setMode,
+    toggleField,
+    setColumnOrder,
+    toggleColumnCollapsed,
+    resetLayout,
+  };
 }

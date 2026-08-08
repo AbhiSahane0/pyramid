@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, ListTree, MessageSquare, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   Collapsible,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import type { ViewPrefs } from "@/hooks/use-view-prefs";
 import { STATUS_META, STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { LabelBadge } from "./label-badge";
 import { MemberAvatars } from "./member-avatars";
 import { PriorityBadge } from "./priority-badge";
@@ -53,7 +54,7 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
   if (groups.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-6 overflow-y-auto px-4 pb-8 sm:px-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-8 sm:px-6">
       {groups.map(({ status, tasks: groupTasks }) => (
         <Collapsible key={status} defaultOpen>
           <CollapsibleTrigger className="group mb-2 flex items-center gap-1.5 text-sm font-semibold">
@@ -61,8 +62,14 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
               className="size-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90"
               aria-hidden
             />
+            <span
+              className={cn("size-2 rounded-full", STATUS_META[status].dotClass)}
+              aria-hidden
+            />
             {STATUS_META[status].label}
-            <span className="font-normal text-muted-foreground">{groupTasks.length}</span>
+            <span className="font-normal text-muted-foreground tabular-nums">
+              {groupTasks.length}
+            </span>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="overflow-x-auto rounded-xl border">
@@ -98,7 +105,25 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
                       className="cursor-pointer"
                       onClick={() => router.push(`/tasks/${task.id}`)}
                     >
-                      <TableCell className="pl-4 font-medium">{task.title}</TableCell>
+                      <TableCell className="max-w-0 pl-4 font-medium">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate" title={task.title}>
+                            {task.title}
+                          </span>
+                          {task._count.subtasks > 0 ? (
+                            <span className="flex shrink-0 items-center gap-1 text-xs font-normal text-muted-foreground">
+                              <ListTree className="size-3.5" aria-hidden />
+                              {task._count.subtasks}
+                            </span>
+                          ) : null}
+                          {task._count.comments > 0 ? (
+                            <span className="flex shrink-0 items-center gap-1 text-xs font-normal text-muted-foreground">
+                              <MessageSquare className="size-3.5" aria-hidden />
+                              {task._count.comments}
+                            </span>
+                          ) : null}
+                        </span>
+                      </TableCell>
                       {fields.priority ? (
                         <TableCell>
                           <PriorityBadge priority={task.priority} className="text-sm" />

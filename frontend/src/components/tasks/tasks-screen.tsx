@@ -1,14 +1,16 @@
 "use client";
 
-import { ClipboardList, RotateCcw, SearchX } from "lucide-react";
+import { ListChecks, Plus, RotateCcw, SearchX, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTasks } from "@/hooks/use-api";
 import { useDebounced } from "@/hooks/use-debounced";
 import { useViewPrefs } from "@/hooks/use-view-prefs";
+import { ApiError } from "@/lib/api";
 import type { TaskFilters, TaskStatus } from "@/lib/types";
 import { BoardView } from "./board-view";
+import { EmptyState } from "./empty-state";
 import { ListView } from "./list-view";
 import { TaskFormDialog } from "./task-form-dialog";
 import { ViewHeader } from "./view-header";
@@ -23,7 +25,7 @@ interface TasksScreenProps {
 
 function BoardSkeleton() {
   return (
-    <div className="flex flex-1 gap-4 overflow-hidden px-4 sm:px-6">
+    <div className="flex flex-1 gap-4 overflow-hidden px-4 pb-6 sm:px-6">
       {[0, 1, 2, 3].map((column) => (
         <div
           key={column}
@@ -41,7 +43,7 @@ function BoardSkeleton() {
 
 function ListSkeleton() {
   return (
-    <div className="flex flex-col gap-6 px-4 sm:px-6">
+    <div className="flex flex-col gap-6 px-4 pb-6 sm:px-6">
       {[0, 1].map((group) => (
         <div key={group} className="space-y-2">
           <Skeleton className="h-5 w-20" />
@@ -58,7 +60,15 @@ export function TasksScreen({
   projectId,
   storageKey,
 }: TasksScreenProps) {
-  const { prefs, hydrated, setMode, toggleField } = useViewPrefs(storageKey);
+  const {
+    prefs,
+    hydrated,
+    setMode,
+    toggleField,
+    setColumnOrder,
+    toggleColumnCollapsed,
+    resetLayout,
+  } = useViewPrefs(storageKey);
   const [filters, setFilters] = useState<TaskFilters>({});
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounced(search);
@@ -70,7 +80,7 @@ export function TasksScreen({
     search: debouncedSearch || undefined,
     projectId,
   };
-  const { data: tasks, isPending, isError, refetch } = useTasks(activeFilters);
+  const { data: tasks, isPending, isError, error, refetch } = useTasks(activeFilters);
 
   const openAddTask = (status: TaskStatus = "TODO") => {
     setDialogStatus(status);
@@ -81,83 +91,105 @@ export function TasksScreen({
     debouncedSearch || Object.values(filters).some(Boolean),
   );
 
-  return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <ViewHeader
-        title={title}
-        prefs={prefs}
-        onModeChange={setMode}
-        onToggleField={toggleField}
-        filters={filters}
-        onFiltersChange={setFilters}
-        search={search}
-        onSearchChange={setSearch}
-        onAddTask={() => openAddTask()}
-      />
+  const renderBody = () => {
+    if (isPending || !hydrated) {
+      return prefs.mode === "list" && hydrated ? <ListSkeleton /> : <BoardSkeleton />;
+    }
 
-      {isPending || !hydrated ? (
-        prefs.mode === "list" && hydrated ? (
-          <ListSkeleton />
-        ) : (
-          <BoardSkeleton />
-        )
-      ) : isError ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Couldn&apos;t load tasks. Check your connection and try again.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            className="gap-1.5"
-          >
-            <RotateCcw className="size-4" aria-hidden />
-            Retry
-          </Button>
-        </div>
-      ) : tasks && tasks.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-          {hasActiveCriteria ? (
-            <>
-              <SearchX className="size-8 text-muted-foreground" aria-hidden />
-              <div>
-                <p className="font-medium">No matching tasks</p>
-                <p className="text-sm text-muted-foreground">
-                  Try a different search or clear the filters.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setFilters({});
-                  setSearch("");
-                }}
-              >
-                Clear all
-              </Button>
-            </>
-          ) : (
-            <>
-              <ClipboardList className="size-8 text-muted-foreground" aria-hidden />
-              <div>
-                <p className="font-medium">No tasks yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Create your first task to get things moving.
-                </p>
-              </div>
-              <Button size="sm" onClick={() => openAddTask()}>
-                Add Task
-              </Button>
-            </>
-          )}
-        </div>
-      ) : prefs.mode === "list" ? (
-        <ListView tasks={tasks ?? []} fields={prefs.fields} onAddTask={openAddTask} />
+    if (isError) {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      return (
+        <EmptyState
+          icon={isOffline ? WifiOff : RotateCcw}
+          title={isOffline ? "You're offline" : "Couldn't load tasks"}
+          description={
+            isOffline
+              ? "Reconnect to the internet and we'll pick up where you left off."
+              : error instanceof ApiError
+                ? error.message
+                : "Something went wrong reaching the server. Please try again."
+          }
+          action={
+            <Button variant="outline" onClick={() => void refetch()} className="gap-1.5">
+              <RotateCcw className="size-4" aria-hidden />
+              Try again
+            </Button>
+          }
+        />
+      );
+    }
+
+    if (tasks && tasks.length === 0) {
+      return hasActiveCriteria ? (
+        <EmptyState
+          icon={SearchX}
+          title="No matching tasks"
+          description="No task matches your current search and filters. Try a different term or clear them."
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFilters({});
+                setSearch("");
+              }}
+            >
+              Clear search &amp; filters
+            </Button>
+          }
+        />
       ) : (
-        <BoardView tasks={tasks ?? []} fields={prefs.fields} onAddTask={openAddTask} />
-      )}
+        <EmptyState
+          icon={ListChecks}
+          title={projectId ? "No tasks in this project yet" : "Your board is empty"}
+          description={
+            projectId
+              ? "Add the first task to this project to start tracking progress."
+              : "Create your first task, then drag it between columns as work moves forward."
+          }
+          action={
+            <Button onClick={() => openAddTask()} className="gap-1.5">
+              <Plus className="size-4" aria-hidden />
+              Add your first task
+            </Button>
+          }
+        />
+      );
+    }
+
+    return prefs.mode === "list" ? (
+      <ListView tasks={tasks ?? []} fields={prefs.fields} onAddTask={openAddTask} />
+    ) : (
+      <BoardView
+        tasks={tasks ?? []}
+        fields={prefs.fields}
+        columnOrder={prefs.columnOrder}
+        collapsedColumns={prefs.collapsedColumns}
+        onAddTask={openAddTask}
+        onColumnOrderChange={setColumnOrder}
+        onToggleCollapsed={toggleColumnCollapsed}
+      />
+    );
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Toolbar stays put; only the board/list below it scrolls. */}
+      <div className="shrink-0">
+        <ViewHeader
+          title={title}
+          prefs={prefs}
+          onModeChange={setMode}
+          onToggleField={toggleField}
+          onResetLayout={resetLayout}
+          filters={filters}
+          onFiltersChange={setFilters}
+          search={search}
+          onSearchChange={setSearch}
+          onAddTask={() => openAddTask()}
+        />
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{renderBody()}</div>
 
       <TaskFormDialog
         open={dialogOpen}
