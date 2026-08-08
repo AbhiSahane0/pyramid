@@ -10,6 +10,16 @@ A production-grade task management app built for the AbleSpace Full Stack Develo
 | Backend | NestJS 11, Prisma 6, PostgreSQL, Passport (Google OAuth 2.0 + JWT), Swagger |
 | Language | TypeScript everywhere, strict mode in both apps |
 
+### What's in it
+
+- **Two views of the same data** — a drag-and-drop Kanban board (columns reorder and collapse, both persisted) and a status-grouped list, with the visible fields chosen per view.
+- **Task detail** — inline title editing, labels, attached resources, a subtasks table, threaded comments and an activity feed that records status and priority changes.
+- **Find and filter** — ⌘F search over titles and descriptions, plus filters for status, priority, member, label and reporter.
+- **Guided tour** — a spotlight walkthrough runs once per account and is replayable from the topbar help menu, alongside a keyboard-shortcut reference.
+- **Theming** — light/dark × six accent colors, persisted and applied before hydration so there's no flash of the wrong theme.
+
+**Guest vs. real accounts:** *Continue as Guest* creates a throwaway account pre-filled with the demo workspace from the Figma, so the design is visible immediately. Signing in with Google creates an **empty** workspace — the app's empty states guide you to your first project and task. The sidebar reminds guests that their workspace is temporary.
+
 ---
 
 ## Running locally
@@ -142,6 +152,7 @@ Documented per the assessment brief; everything else follows the design as close
 - **Log out** was added to the user menu (the mock shows no way to end a session).
 - **Avatars.** The mock's cartoon avatars are replaced with DiceBear-generated ones (same visual role); Google users get their real profile photo, guests get initials — matching the mock's "CN" initials pattern.
 - **Fields defaults** show Labels on the board cards (as the mock's board does); toggling Labels off in Fields reproduces the mock's exact list-view columns.
+- **Additions beyond the mock**, added because shipping them felt more honest than leaving dead UI or an unexplained first run: the column drag handle and column "…" menu are wired to real behaviour (reorder / collapse) rather than being decorative; a help menu in the topbar hosts the product tour and keyboard shortcuts; and the sidebar shows guests a note that their workspace is temporary.
 
 ## Assessment mapping
 
