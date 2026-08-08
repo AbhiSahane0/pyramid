@@ -193,4 +193,50 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /*
+   * Tailwind v4 resets buttons to `cursor: default`. Restore the pointer on
+   * everything clickable — including Radix triggers and menu items, which
+   * render as generic elements with roles rather than <button>.
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"],
+  [role="tab"],
+  [role="switch"],
+  [role="checkbox"],
+  a[href],
+  label[for],
+  summary,
+  select,
+  [data-slot="dropdown-menu-trigger"],
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="popover-trigger"],
+  [data-slot="select-trigger"],
+  [data-slot="select-item"],
+  [data-slot="checkbox"],
+  [data-slot="sidebar-menu-button"],
+  [data-slot="sidebar-trigger"],
+  [data-slot="collapsible-trigger"],
+  [data-slot="calendar"] button:not(:disabled),
+  [data-slot="alert-dialog-action"],
+  [data-slot="alert-dialog-cancel"] {
+    @apply cursor-pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  [data-disabled] {
+    @apply cursor-not-allowed;
+  }
+
+  /* Keep text inputs on the text caret even inside clickable containers. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]),
+  textarea {
+    @apply cursor-text;
+  }
 }
