@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Logo } from "@/components/logo";
@@ -35,51 +36,68 @@ function targetRect(step: TourStep | undefined): Rect | null {
   };
 }
 
-/** Places the card next to the spotlight, flipping when it would overflow. */
-function cardPosition(rect: Rect | null, placement: TourStep["placement"]) {
-  if (typeof window === "undefined" || !rect) {
-    return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-  }
+const CENTERED = {
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+} as const;
+
+/** Distance the card keeps from the viewport edges. */
+const MARGIN = 12;
+
+interface Size {
+  width: number;
+  height: number;
+}
+
+/**
+ * Places the card beside the spotlight, preferring the step's placement and
+ * falling back through the other sides. Both axes are clamped to the viewport,
+ * and when no side can hold the card — a target as large as the board leaves
+ * no room anywhere — it is centered instead. Without that fallback the card
+ * could be pushed off-screen, stranding the user with no visible Next button.
+ */
+function cardPosition(
+  rect: Rect | null,
+  placement: TourStep["placement"],
+  card: Size,
+): CSSProperties {
+  if (typeof window === "undefined" || !rect) return CENTERED;
 
   const { innerWidth: vw, innerHeight: vh } = window;
-  const estimatedHeight = 190;
-  let side = placement ?? "bottom";
+  const clampX = (x: number) =>
+    Math.min(Math.max(x, MARGIN), Math.max(MARGIN, vw - card.width - MARGIN));
+  const clampY = (y: number) =>
+    Math.min(Math.max(y, MARGIN), Math.max(MARGIN, vh - card.height - MARGIN));
 
-  const fits = {
-    bottom: rect.top + rect.height + GAP + estimatedHeight < vh,
-    top: rect.top - GAP - estimatedHeight > 0,
-    right: rect.left + rect.width + GAP + CARD_WIDTH < vw,
-    left: rect.left - GAP - CARD_WIDTH > 0,
-  };
-  if (!fits[side]) {
-    side = (["bottom", "top", "right", "left"] as const).find((s) => fits[s]) ?? "bottom";
+  const centerX = rect.left + rect.width / 2 - card.width / 2;
+  const centerY = rect.top + rect.height / 2 - card.height / 2;
+
+  const candidates = {
+    bottom: { top: rect.top + rect.height + GAP, left: centerX },
+    top: { top: rect.top - GAP - card.height, left: centerX },
+    right: { top: centerY, left: rect.left + rect.width + GAP },
+    left: { top: centerY, left: rect.left - GAP - card.width },
+  } as const;
+
+  // Try the requested side first, then the rest. A side qualifies when the
+  // axis it controls has room; the other axis is clamped into view.
+  const order = [placement ?? "bottom", "bottom", "top", "right", "left"] as const;
+  for (const side of order) {
+    const { top, left } = candidates[side];
+    const hasRoom =
+      side === "bottom"
+        ? top + card.height <= vh - MARGIN
+        : side === "top"
+          ? top >= MARGIN
+          : side === "right"
+            ? left + card.width <= vw - MARGIN
+            : left >= MARGIN;
+
+    if (hasRoom) return { top: clampY(top), left: clampX(left) };
   }
 
-  const clampX = (x: number) => Math.min(Math.max(x, 12), vw - CARD_WIDTH - 12);
-  const clampY = (y: number) => Math.min(Math.max(y, 12), vh - estimatedHeight - 12);
-
-  switch (side) {
-    case "top":
-      return {
-        top: rect.top - GAP - estimatedHeight,
-        left: clampX(rect.left + rect.width / 2 - CARD_WIDTH / 2),
-      };
-    case "left":
-      return {
-        top: clampY(rect.top + rect.height / 2 - estimatedHeight / 2),
-        left: rect.left - GAP - CARD_WIDTH,
-      };
-    case "right":
-      return {
-        top: clampY(rect.top + rect.height / 2 - estimatedHeight / 2),
-        left: rect.left + rect.width + GAP,
-      };
-    default:
-      return {
-        top: rect.top + rect.height + GAP,
-        left: clampX(rect.left + rect.width / 2 - CARD_WIDTH / 2),
-      };
-  }
+  return CENTERED;
 }
 
 /**
@@ -91,7 +109,27 @@ export function OnboardingTour() {
   const { isOpen, stop } = useTour();
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  // Measured rather than assumed: the card grows with the step's copy, and a
+  // wrong height is what pushes it off-screen.
+  const [cardSize, setCardSize] = useState<Size>({ width: CARD_WIDTH, height: 190 });
   const mounted = useMounted();
+
+  const measureCard = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const apply = () => {
+      const { width, height } = node.getBoundingClientRect();
+      if (width === 0 && height === 0) return;
+      setCardSize((current) =>
+        Math.abs(current.width - width) < 1 && Math.abs(current.height - height) < 1
+          ? current
+          : { width, height },
+      );
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // Which targets currently exist. Re-scanned while the tour is open so the
   // script adapts to the viewport (no sidebar on mobile) and to view changes
@@ -161,27 +199,34 @@ export function OnboardingTour() {
     };
   }, [isOpen, step]);
 
+  // Rewind on the way out so replaying from the help menu starts at step one
+  // rather than resuming where the last run ended.
+  const close = useCallback(() => {
+    setIndex(0);
+    stop();
+  }, [stop]);
+
   const next = useCallback(() => {
-    if (isLast) stop();
+    if (isLast) close();
     else setIndex((current) => current + 1);
-  }, [isLast, stop]);
+  }, [isLast, close]);
 
   const back = useCallback(() => setIndex((current) => Math.max(0, current - 1)), []);
 
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") stop();
+      if (event.key === "Escape") close();
       if (event.key === "ArrowRight" || event.key === "Enter") next();
       if (event.key === "ArrowLeft") back();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, next, back, stop]);
+  }, [isOpen, next, back, close]);
 
   if (!mounted || !isOpen || !step) return null;
 
-  const position = cardPosition(rect, step.placement);
+  const position = cardPosition(rect, step.placement, cardSize);
 
   return createPortal(
     <div
@@ -217,10 +262,11 @@ export function OnboardingTour() {
         aria-label="Skip tour"
         tabIndex={-1}
         className="absolute inset-0 cursor-default"
-        onClick={stop}
+        onClick={close}
       />
 
       <div
+        ref={measureCard}
         className="absolute w-[330px] max-w-[calc(100vw-24px)] rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg"
         style={position}
       >
@@ -234,7 +280,7 @@ export function OnboardingTour() {
             size="icon"
             className="-mt-1 -mr-1 size-7 text-muted-foreground"
             aria-label="Skip tour"
-            onClick={stop}
+            onClick={close}
           >
             <X className="size-4" aria-hidden />
           </Button>
@@ -264,7 +310,7 @@ export function OnboardingTour() {
               Back
             </Button>
           ) : (
-            <Button variant="ghost" size="sm" onClick={stop}>
+            <Button variant="ghost" size="sm" onClick={close}>
               Skip
             </Button>
           )}
