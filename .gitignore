@@ -35,3 +35,6 @@ coverage/
 
 # Local editor / agent config
 .claude/
+
+# backups
+*.sql
