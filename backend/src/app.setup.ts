@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { resolveFrontendUrl } from './common/frontend-url';
 
 /**
  * Shared app configuration used by both the production bootstrap (main.ts)
@@ -12,7 +13,7 @@ export function configureApp(app: NestExpressApplication): void {
   app.set('trust proxy', 1);
   app.use(cookieParser());
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    origin: resolveFrontendUrl(process.env.FRONTEND_URL),
     credentials: true,
   });
   app.useGlobalPipes(

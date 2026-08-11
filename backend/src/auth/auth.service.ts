@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { User } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import type { CookieOptions, Response } from 'express';
+import { resolveFrontendUrl } from '../common/frontend-url';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkspaceSeedService } from '../seed/workspace-seed.service';
 import type { GoogleUser, JwtPayload, TokenPair } from './types';
@@ -170,7 +171,7 @@ export class AuthService {
   }
 
   get frontendUrl(): string {
-    return this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
+    return resolveFrontendUrl(this.config.get<string>('FRONTEND_URL'));
   }
 
   private get accessTtl(): string {

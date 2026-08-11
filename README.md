@@ -138,6 +138,35 @@ Target: **Vercel** (frontend) + **Render** (backend web service + managed Postgr
 4. **Google Cloud Console:** add `https://<app>.vercel.app/api/auth/google/callback` to the OAuth client's authorized redirect URIs.
 5. Seed once: `npm run seed` against the production `DATABASE_URL` (or rely on first-login seeding, which also upserts the globals).
 
+### Troubleshooting: signed in with Google but bounced back to `/login`
+
+Symptom: the Google consent screen works, you land back on the app, and every
+API call returns `401`.
+
+Cause: `GOOGLE_CALLBACK_URL` (and the URI registered in Google) points at the
+**API** origin instead of the **frontend** origin. The browser only ever talks
+to the frontend, which proxies `/api/*` to NestJS, so the callback must go
+through that proxy for the session cookie to be set on the frontend's domain. A
+callback sent straight to the API host sets the cookie on the API's domain, and
+the browser will never send that cookie back to the frontend.
+
+```
+wrong  https://<backend>.onrender.com/api/auth/google/callback
+right  https://<app>.vercel.app/api/auth/google/callback
+```
+
+Fix it in three places, then redeploy the backend: the Google Console redirect
+URI, `GOOGLE_CALLBACK_URL` on the backend, and — while you are there — make sure
+`FRONTEND_URL` has **no trailing slash** (a trailing slash yields a `//tasks`
+redirect and a CORS origin that can never match a real `Origin` header).
+
+To confirm which callback is live, check the `redirect_uri` the API hands to
+Google:
+
+```bash
+curl -sI https://<app>.vercel.app/api/auth/google | tr '&' '\n' | grep redirect_uri
+```
+
 **45-day availability notes:** Vercel Hobby and Render free Postgres stay up well past 45 days (Render free Postgres expires after 90). Render free *web services* sleep after inactivity — the first request may take ~50s to cold-start; a paid instance or an uptime pinger avoids this. No other free-tier limits apply at this app's scale.
 
 ## Intentional deviations from the Figma
