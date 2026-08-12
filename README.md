@@ -2,7 +2,7 @@
 
 A production-grade task management app built for the AbleSpace Full Stack Developer technical assessment, implementing the provided Figma design: Kanban board + list views, task detail with subtasks/comments/activity, projects, Google OAuth + Guest login, and a persistent theme system (light/dark × six accent colors).
 
-**Live demo:** _URL added at deployment_ · **API docs (Swagger):** `<backend-url>/api/docs`
+**Live demo:** _URL added at deployment_ · **API docs (Swagger):** `<backend-url>/api/docs` · **Health:** `<backend-url>/api/health`
 
 | | |
 |---|---|
@@ -135,6 +135,7 @@ Target: **Vercel** (frontend) + **Render** (backend web service + managed Postgr
 1. **Postgres (Render):** create a Postgres instance, copy the *internal* connection string.
 2. **Backend (Render web service):** root dir `backend`, build `npm ci && npx prisma generate && npm run build`, pre-deploy `npx prisma migrate deploy`, start `npm run start:prod`. Set every backend env var above (`NODE_ENV=production`, `FRONTEND_URL=https://<app>.vercel.app`, `GOOGLE_CALLBACK_URL=https://<app>.vercel.app/api/auth/google/callback`).
 3. **Frontend (Vercel):** root dir `frontend`, framework Next.js, env `API_URL=https://<backend>.onrender.com`.
+   Set Render's *Health Check Path* to `/api/health` so failed deploys roll back instead of going live.
 4. **Google Cloud Console:** add `https://<app>.vercel.app/api/auth/google/callback` to the OAuth client's authorized redirect URIs.
 5. Seed once: `npm run seed` against the production `DATABASE_URL` (or rely on first-login seeding, which also upserts the globals).
 
@@ -167,7 +168,7 @@ Google:
 curl -sI https://<app>.vercel.app/api/auth/google | tr '&' '\n' | grep redirect_uri
 ```
 
-**45-day availability notes:** Vercel Hobby and Render free Postgres stay up well past 45 days (Render free Postgres expires after 90). Render free *web services* sleep after inactivity — the first request may take ~50s to cold-start; a paid instance or an uptime pinger avoids this. No other free-tier limits apply at this app's scale.
+**45-day availability notes:** Vercel Hobby and Render free Postgres stay up well past 45 days (Render free Postgres expires after 90). Render free *web services* sleep after inactivity — the first request may take ~50s to cold-start; a paid instance, or an uptime monitor pinging `/api/health` every few minutes, avoids this. No other free-tier limits apply at this app's scale.
 
 ## Intentional deviations from the Figma
 

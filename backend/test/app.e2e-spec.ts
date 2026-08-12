@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { AuthService } from '../src/auth/auth.service';
+import type { HealthResponse } from '../src/health/health.controller';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 /**
@@ -39,6 +40,15 @@ describe('Pyramid API (e2e)', () => {
       await authed(agent().delete('/api/users/me'));
     }
     await app.close();
+  });
+
+  it('reports healthy without authentication', async () => {
+    const response = await agent().get('/api/health').expect(200);
+    const body = response.body as HealthResponse;
+    expect(body.status).toBe('ok');
+    expect(body.database).toBe('up');
+    expect(typeof body.uptime).toBe('number');
+    expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
   });
 
   it('rejects unauthenticated access to protected routes', async () => {
