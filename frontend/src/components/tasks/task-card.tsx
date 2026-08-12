@@ -47,6 +47,11 @@ export function TaskCard({ task, fields, overlay }: TaskCardProps) {
         pointerStart.current = { x: event.clientX, y: event.clientY };
       }}
       onClick={(event) => {
+        // React replays events from portals through the React tree, so clicks
+        // inside this card's dialogs and menus (which render elsewhere in the
+        // DOM) arrive here too. Only react to clicks on the card itself.
+        if (!event.currentTarget.contains(event.target as Node)) return;
+
         // Ignore the click that follows a drag gesture.
         const start = pointerStart.current;
         pointerStart.current = null;

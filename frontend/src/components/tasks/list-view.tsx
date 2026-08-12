@@ -103,7 +103,14 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
                     <TableRow
                       key={task.id}
                       className="cursor-pointer"
-                      onClick={() => router.push(`/tasks/${task.id}`)}
+                      onClick={(event) => {
+                        // Skip clicks replayed from portaled dialogs/menus
+                        // rendered by this row (see TaskCard for details).
+                        if (!event.currentTarget.contains(event.target as Node)) {
+                          return;
+                        }
+                        router.push(`/tasks/${task.id}`);
+                      }}
                     >
                       <TableCell className="max-w-0 pl-4 font-medium">
                         <span className="flex items-center gap-2">
