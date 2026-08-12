@@ -81,9 +81,13 @@ function BoardColumn({
     transition,
     isDragging,
   } = useSortable({ id: status, data: { type: "column" } });
+  // Separate id from the sortable above: `useSortable` already registers a
+  // droppable under `status`, and registering a second one with the same id
+  // makes the two nodes fight over a single entry, so column drop targeting
+  // (notably onto an empty column) becomes unreliable.
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: status,
-    data: { type: "column" },
+    id: dropzoneId(status),
+    data: { type: "dropzone", status },
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -229,6 +233,10 @@ function BoardColumn({
   );
 }
 
+/** Droppable id for a column's card area, kept distinct from the column id. */
+const DROPZONE_PREFIX = "dropzone:";
+const dropzoneId = (status: TaskStatus): string => `${DROPZONE_PREFIX}${status}`;
+
 /** Fractional position between the drop target's neighbors. */
 function positionBetween(before?: Task, after?: Task): number {
   if (before && after) return (before.position + after.position) / 2;
@@ -277,7 +285,15 @@ export function BoardView({
   const isColumnId = (id: string): id is TaskStatus =>
     STATUS_ORDER.includes(id as TaskStatus);
 
+  /** True for a column itself or its card drop area — both mean "this column". */
+  const isColumnTarget = (id: string): boolean =>
+    isColumnId(id) || id.startsWith(DROPZONE_PREFIX);
+
   const findColumn = (id: string): TaskStatus | undefined => {
+    if (id.startsWith(DROPZONE_PREFIX)) {
+      const status = id.slice(DROPZONE_PREFIX.length);
+      return isColumnId(status) ? status : undefined;
+    }
     if (isColumnId(id)) return id;
     const task = tasks.find((t) => t.id === id);
     return task ? (override[task.id] ?? task.status) : undefined;
@@ -312,7 +328,7 @@ export function BoardView({
 
     // Column reorder
     if (isColumnId(activeId)) {
-      const overColumn = isColumnId(overId) ? overId : findColumn(overId);
+      const overColumn = findColumn(overId);
       if (overColumn && overColumn !== activeId) {
         const from = columnOrder.indexOf(activeId);
         const to = columnOrder.indexOf(overColumn);
@@ -332,7 +348,7 @@ export function BoardView({
 
     const column = (columns.get(targetStatus) ?? []).filter((t) => t.id !== task.id);
     let index = column.length;
-    if (!isColumnId(overId)) {
+    if (!isColumnTarget(overId)) {
       const overIndex = column.findIndex((t) => t.id === overId);
       if (overIndex >= 0) index = overIndex;
     }

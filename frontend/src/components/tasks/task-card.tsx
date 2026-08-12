@@ -31,6 +31,11 @@ export function TaskCard({ task, fields, overlay }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id, data: { type: "task", task }, disabled: overlay });
 
+  // The card needs its own pointerdown handler (to measure drag distance) and
+  // dnd-kit's (to start a drag). Spreading `listeners` and then declaring
+  // onPointerDown would silently replace theirs, so compose the two by hand.
+  const { onPointerDown: startDrag, ...dragListeners } = listeners ?? {};
+
   const firstMember = task.members[0];
   const open = () => router.push(`/tasks/${task.id}`);
 
@@ -39,12 +44,13 @@ export function TaskCard({ task, fields, overlay }: TaskCardProps) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
-      {...listeners}
+      {...dragListeners}
       role="button"
       tabIndex={0}
       aria-label={`Open task ${task.title}`}
       onPointerDown={(event) => {
         pointerStart.current = { x: event.clientX, y: event.clientY };
+        startDrag?.(event);
       }}
       onClick={(event) => {
         // React replays events from portals through the React tree, so clicks
