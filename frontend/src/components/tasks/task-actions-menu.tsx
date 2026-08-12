@@ -2,16 +2,7 @@
 
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -79,26 +70,24 @@ export function TaskActionsMenu({ task, onDeleted, className }: TaskActionsMenuP
 
       <TaskFormDialog open={editing} onOpenChange={setEditing} task={task} />
 
-      <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
-        <AlertDialogContent onClick={(event) => event.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-            <AlertDialogDescription>
-              &ldquo;{task.title}&rdquo; and all of its subtasks and comments will be
-              permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => deleteTask.mutate(task.id, { onSuccess: onDeleted })}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title="Delete this task?"
+        description={`“${task.title}” and all of its subtasks and comments will be permanently removed.`}
+        confirmLabel="Delete"
+        pendingLabel="Deleting…"
+        destructive
+        pending={deleteTask.isPending}
+        onConfirm={() =>
+          deleteTask.mutate(task.id, {
+            onSuccess: () => {
+              setConfirmingDelete(false);
+              onDeleted?.();
+            },
+          })
+        }
+      />
     </>
   );
 }

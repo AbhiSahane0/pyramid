@@ -18,16 +18,7 @@ import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
 import { EmptyState } from "@/components/tasks/empty-state";
 import { MemberAvatars } from "@/components/tasks/member-avatars";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -289,32 +280,22 @@ export default function ProjectsPage() {
         project={editing}
       />
 
-      <AlertDialog
+      <ConfirmDialog
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(undefined)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
-            <AlertDialogDescription>
-              &ldquo;{deleting?.name}&rdquo; and all of its tasks will be permanently
-              removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => {
-                if (deleting) deleteProject.mutate(deleting.id);
-                setDeleting(undefined);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete this project?"
+        description={`“${deleting?.name ?? ""}” and all of its tasks will be permanently removed.`}
+        confirmLabel="Delete"
+        pendingLabel="Deleting…"
+        destructive
+        pending={deleteProject.isPending}
+        onConfirm={() => {
+          if (!deleting) return;
+          deleteProject.mutate(deleting.id, {
+            onSuccess: () => setDeleting(undefined),
+          });
+        }}
+      />
     </div>
   );
 }

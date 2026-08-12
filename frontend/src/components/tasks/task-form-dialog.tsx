@@ -2,10 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon, Loader2, Tag, Users } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DatePicker } from "@/components/tasks/date-picker";
 import {
   LabelPicker,
@@ -112,8 +113,11 @@ export function TaskFormDialog({
   }, [open, task, defaultStatus, form]);
 
   const submitting = createTask.isPending || updateTask.isPending;
+  const [confirmingSave, setConfirmingSave] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
-  const onSubmit = form.handleSubmit(async (values) => {
+  const save = async () => {
+    const values = form.getValues();
     const payload = {
       title: values.title,
       description: values.description || undefined,
@@ -131,11 +135,28 @@ export function TaskFormDialog({
     } else {
       await createTask.mutateAsync({ ...payload, projectId, parentId });
     }
+    setConfirmingSave(false);
     onOpenChange(false);
+  };
+
+  // Editing overwrites an existing task, so confirm first. Creating has
+  // nothing to overwrite and saves straight away.
+  const onSubmit = form.handleSubmit(async () => {
+    if (isEdit) setConfirmingSave(true);
+    else await save();
   });
 
+  /** Closing with unsaved edits asks before throwing them away. */
+  const requestClose = (next: boolean) => {
+    if (!next && form.formState.isDirty && !submitting) {
+      setConfirmingDiscard(true);
+      return;
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
@@ -323,6 +344,31 @@ export function TaskFormDialog({
           </form>
         </Form>
       </DialogContent>
+
+      <ConfirmDialog
+        open={confirmingSave}
+        onOpenChange={setConfirmingSave}
+        title="Save changes to this task?"
+        description="This overwrites the task's current details."
+        confirmLabel="Save changes"
+        pendingLabel="Saving…"
+        pending={submitting}
+        onConfirm={() => void save()}
+      />
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        onOpenChange={setConfirmingDiscard}
+        title="Discard your changes?"
+        description="You have unsaved edits on this task. Closing now loses them."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={() => {
+          setConfirmingDiscard(false);
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }

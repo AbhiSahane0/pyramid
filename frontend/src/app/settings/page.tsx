@@ -1,22 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil } from "lucide-react";
-import { useEffect } from "react";
+import { Loader2, Pencil } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -65,6 +55,8 @@ export default function ProfileSettingsPage() {
   const { data: user, isPending } = useMe();
   const updateProfile = useUpdateProfile();
   const leaveWorkspace = useLeaveWorkspace();
+  const [confirmingSave, setConfirmingSave] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
 
   const form = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -81,11 +73,22 @@ export default function ProfileSettingsPage() {
     }
   }, [user, form]);
 
-  const onSubmit = form.handleSubmit((values) => {
-    updateProfile.mutate(values, {
-      onSuccess: () => form.reset(values),
+  // Editing overwrites saved details, so the submit button opens a confirm and
+  // the actual request runs from there.
+  const onSubmit = form.handleSubmit(() => setConfirmingSave(true));
+
+  const submitProfile = () => {
+    updateProfile.mutate(form.getValues(), {
+      onSuccess: (updated) => {
+        form.reset({
+          name: updated.name,
+          title: updated.title ?? "",
+          username: updated.username ?? "",
+        });
+        setConfirmingSave(false);
+      },
     });
-  });
+  };
 
   if (isPending || !user) {
     return (
@@ -188,8 +191,15 @@ export default function ProfileSettingsPage() {
                 >
                   Discard
                 </Button>
-                <Button type="submit" disabled={updateProfile.isPending}>
-                  Save changes
+                <Button
+                  type="submit"
+                  disabled={updateProfile.isPending}
+                  className="gap-1.5"
+                >
+                  {updateProfile.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  {updateProfile.isPending ? "Saving…" : "Save changes"}
                 </Button>
               </div>
             ) : null}
@@ -203,36 +213,38 @@ export default function ProfileSettingsPage() {
           <p className="text-sm text-muted-foreground">
             Remove yourself from the workspace
           </p>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
-              >
-                Leave Workspace
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Leave this workspace?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Your account and every project, task and comment you own will be
-                  permanently deleted. This cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-white hover:bg-destructive/90"
-                  onClick={() => leaveWorkspace.mutate()}
-                >
-                  Leave Workspace
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            variant="outline"
+            className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
+            onClick={() => setConfirmingLeave(true)}
+          >
+            Leave Workspace
+          </Button>
         </div>
       </section>
+
+      <ConfirmDialog
+        open={confirmingLeave}
+        onOpenChange={setConfirmingLeave}
+        title="Leave this workspace?"
+        description="Your account and every project, task and comment you own will be permanently deleted. This cannot be undone."
+        confirmLabel="Leave Workspace"
+        pendingLabel="Leaving…"
+        destructive
+        pending={leaveWorkspace.isPending}
+        onConfirm={() => leaveWorkspace.mutate()}
+      />
+
+      <ConfirmDialog
+        open={confirmingSave}
+        onOpenChange={setConfirmingSave}
+        title="Save profile changes?"
+        description="This overwrites your current profile details."
+        confirmLabel="Save changes"
+        pendingLabel="Saving…"
+        pending={updateProfile.isPending}
+        onConfirm={submitProfile}
+      />
     </div>
   );
 }

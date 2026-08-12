@@ -3,6 +3,7 @@
 import {
   Eye,
   Link2,
+  Loader2,
   Lock,
   Paperclip,
   PanelRight,
@@ -107,8 +108,12 @@ function AddResourceDialog({
             <Button
               type="submit"
               disabled={addResource.isPending || !name.trim() || !url.trim()}
+              className="gap-1.5"
             >
-              Add
+              {addResource.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
+              {addResource.isPending ? "Adding…" : "Add"}
             </Button>
           </DialogFooter>
         </form>

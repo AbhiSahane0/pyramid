@@ -1,7 +1,15 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { ArrowRight, ChevronDown, Plus, Settings2, UserRound, Users } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Loader2,
+  Plus,
+  Settings2,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { DatePicker } from "@/components/tasks/date-picker";
 import {
   LabelPicker,
@@ -63,6 +71,15 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
             />
             Details
           </CollapsibleTrigger>
+          {updateTask.isPending ? (
+            <span
+              className="flex items-center gap-1 text-xs text-muted-foreground"
+              role="status"
+            >
+              <Loader2 className="size-3 animate-spin" aria-hidden />
+              Saving…
+            </span>
+          ) : null}
           <span className="flex-1" />
           <Button
             variant="ghost"

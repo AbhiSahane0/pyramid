@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon, Check, Loader2, User } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DatePicker } from "@/components/tasks/date-picker";
 import { PriorityPicker } from "@/components/tasks/pickers";
 import { PriorityIcon } from "@/components/tasks/priority-badge";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -85,8 +86,11 @@ export function ProjectFormDialog({
   }, [open, project, form]);
 
   const submitting = createProject.isPending || updateProject.isPending;
+  const [confirmingSave, setConfirmingSave] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
-  const onSubmit = form.handleSubmit(async (values) => {
+  const save = async () => {
+    const values = form.getValues();
     const payload = {
       name: values.name,
       priority: values.priority,
@@ -98,11 +102,28 @@ export function ProjectFormDialog({
     } else {
       await createProject.mutateAsync(payload);
     }
+    setConfirmingSave(false);
     onOpenChange(false);
+  };
+
+  // Editing overwrites an existing project, so confirm first; creating saves
+  // straight away.
+  const onSubmit = form.handleSubmit(async () => {
+    if (isEdit) setConfirmingSave(true);
+    else await save();
   });
 
+  /** Closing with unsaved edits asks before throwing them away. */
+  const requestClose = (next: boolean) => {
+    if (!next && form.formState.isDirty && !submitting) {
+      setConfirmingDiscard(true);
+      return;
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit project" : "Add project"}</DialogTitle>
@@ -253,6 +274,31 @@ export function ProjectFormDialog({
           </form>
         </Form>
       </DialogContent>
+
+      <ConfirmDialog
+        open={confirmingSave}
+        onOpenChange={setConfirmingSave}
+        title="Save changes to this project?"
+        description="This overwrites the project's current details."
+        confirmLabel="Save changes"
+        pendingLabel="Saving…"
+        pending={submitting}
+        onConfirm={() => void save()}
+      />
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        onOpenChange={setConfirmingDiscard}
+        title="Discard your changes?"
+        description="You have unsaved edits on this project. Closing now loses them."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={() => {
+          setConfirmingDiscard(false);
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }

@@ -3,6 +3,7 @@
 import {
   Check,
   ChevronsUpDown,
+  Loader2,
   LogOut,
   Moon,
   Settings,
@@ -12,6 +13,8 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
+import { useState } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useMounted } from "@/hooks/use-mounted";
 import {
   COLOR_MODES,
@@ -57,6 +60,7 @@ export function UserMenu() {
   const { colorMode, setColorMode } = useColorMode();
   const logout = useLogout();
   const mounted = useMounted();
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   const name = user?.name ?? "Workspace";
   const email = user?.email ?? "";
@@ -163,12 +167,38 @@ export function UserMenu() {
         <DropdownMenuItem
           className="gap-2 rounded-md px-2 py-2"
           disabled={logout.isPending}
-          onClick={() => logout.mutate()}
+          onSelect={() => setConfirmingLogout(true)}
         >
-          <LogOut className="size-4" aria-hidden />
-          Log out
+          {logout.isPending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <LogOut className="size-4" aria-hidden />
+          )}
+          {logout.isPending ? "Signing out…" : "Log out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      <ConfirmDialog
+        open={confirmingLogout}
+        onOpenChange={setConfirmingLogout}
+        title="Log out?"
+        description={
+          user?.isGuest
+            ? "You're signed in as a guest — this demo workspace and everything in it is deleted when the session ends and cannot be recovered."
+            : "You'll be signed out of Pyramid and returned to the login page. Your work stays saved."
+        }
+        confirmLabel="Log out"
+        pendingLabel="Signing out…"
+        pending={logout.isPending}
+        destructive={user?.isGuest}
+        onConfirm={() =>
+          logout.mutate(undefined, {
+            // Leave the dialog up on failure so the error toast is readable
+            // against a stable screen rather than a half-torn-down menu.
+            onSuccess: () => setConfirmingLogout(false),
+          })
+        }
+      />
     </DropdownMenu>
   );
 }

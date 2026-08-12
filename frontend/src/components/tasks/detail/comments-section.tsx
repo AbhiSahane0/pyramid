@@ -2,6 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import {
+  Loader2,
   MoreHorizontal,
   Paperclip,
   SendHorizontal,
@@ -9,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,10 +27,11 @@ interface CommentInputProps {
   placeholder: string;
   avatar: { name: string; avatarUrl: string | null };
   onSubmit: (body: string) => Promise<unknown>;
-  disabled?: boolean;
+  /** Request in flight: locks the field and spins the send button. */
+  pending?: boolean;
 }
 
-function CommentInput({ placeholder, avatar, onSubmit, disabled }: CommentInputProps) {
+function CommentInput({ placeholder, avatar, onSubmit, pending }: CommentInputProps) {
   const [value, setValue] = useState("");
 
   const submit = async (event: FormEvent) => {
@@ -53,7 +56,7 @@ function CommentInput({ placeholder, avatar, onSubmit, disabled }: CommentInputP
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
-        disabled={disabled}
+        disabled={pending}
         className="h-8 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
       <Button
@@ -69,11 +72,15 @@ function CommentInput({ placeholder, avatar, onSubmit, disabled }: CommentInputP
         type="submit"
         variant="ghost"
         size="icon"
-        aria-label="Send"
-        disabled={disabled || !value.trim()}
+        aria-label={pending ? "Sending…" : "Send"}
+        disabled={pending || !value.trim()}
         className="size-7 text-muted-foreground hover:text-foreground"
       >
-        <SendHorizontal className="size-4" aria-hidden />
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          <SendHorizontal className="size-4" aria-hidden />
+        )}
       </Button>
     </form>
   );
@@ -83,6 +90,7 @@ function CommentCard({ comment, taskId }: { comment: Comment; taskId: string }) 
   const { data: me } = useMe();
   const addComment = useAddComment(taskId);
   const deleteComment = useDeleteComment(taskId);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <article className="space-y-3 rounded-xl border bg-card p-3.5">
@@ -120,7 +128,7 @@ function CommentCard({ comment, taskId }: { comment: Comment; taskId: string }) 
             <DropdownMenuItem
               variant="destructive"
               className="gap-2"
-              onClick={() => deleteComment.mutate(comment.id)}
+              onSelect={() => setConfirmingDelete(true)}
             >
               <Trash2 className="size-4" aria-hidden />
               Delete
@@ -152,11 +160,27 @@ function CommentCard({ comment, taskId }: { comment: Comment; taskId: string }) 
         </div>
       ) : null}
 
+      <ConfirmDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title="Delete this comment?"
+        description="The comment and any replies to it will be permanently removed."
+        confirmLabel="Delete"
+        pendingLabel="Deleting…"
+        destructive
+        pending={deleteComment.isPending}
+        onConfirm={() =>
+          deleteComment.mutate(comment.id, {
+            onSuccess: () => setConfirmingDelete(false),
+          })
+        }
+      />
+
       <CommentInput
         placeholder="Leave a reply…"
         avatar={{ name: me?.name ?? "You", avatarUrl: me?.avatarUrl ?? null }}
         onSubmit={(body) => addComment.mutateAsync({ body, parentId: comment.id })}
-        disabled={addComment.isPending}
+        pending={addComment.isPending}
       />
     </article>
   );
@@ -182,7 +206,7 @@ export function CommentsSection({
         placeholder="Add a comment…"
         avatar={{ name: me?.name ?? "You", avatarUrl: me?.avatarUrl ?? null }}
         onSubmit={(body) => addComment.mutateAsync({ body })}
-        disabled={addComment.isPending}
+        pending={addComment.isPending}
       />
     </section>
   );
