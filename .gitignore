@@ -41,3 +41,6 @@ coverage/
 # Part 2 write-up — personal working files, not part of the submitted codebase
 /part-2/
 part-2-*.md
+
+# Interview prep handbook — study material, not part of the codebase
+/PROJECT_HANDBOOK.md
