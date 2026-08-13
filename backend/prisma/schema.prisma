@@ -15,6 +15,14 @@ enum TaskStatus {
   ON_HOLD
 }
 
+/// Permissions inside a workspace. OWNER is the creator: exactly one per
+/// workspace, cannot be demoted or removed (that would orphan the workspace).
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 enum Priority {
   NO_PRIORITY
   URGENT
@@ -40,13 +48,71 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownedProjects Project[]  @relation("ProjectOwner")
-  ownedTasks    Task[]     @relation("TaskOwner")
-  ledProjects   Project[]  @relation("ProjectLead")
-  reportedTasks Task[]     @relation("TaskReporter")
-  memberTasks   Task[]     @relation("TaskMembers")
-  comments      Comment[]
-  activities    Activity[]
+  memberships     Membership[]
+  invitationsSent Invitation[] @relation("InvitationsSent")
+
+  createdProjects Project[]  @relation("ProjectCreator")
+  createdTasks    Task[]     @relation("TaskCreator")
+  ledProjects     Project[]  @relation("ProjectLead")
+  reportedTasks   Task[]     @relation("TaskReporter")
+  memberTasks     Task[]     @relation("TaskMembers")
+  comments        Comment[]
+  activities      Activity[]
+}
+
+/// A team. Projects and tasks belong to a workspace, not to a person, so every
+/// member sees the same board and nothing is lost when someone leaves.
+model Workspace {
+  id   String @id @default(cuid())
+  name String
+
+  members     Membership[]
+  invitations Invitation[]
+  projects    Project[]
+  tasks       Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Join table between User and Workspace, carrying the role.
+model Membership {
+  id   String        @id @default(cuid())
+  role WorkspaceRole @default(MEMBER)
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  /// One membership per user per workspace — re-inviting an existing member
+  /// is rejected by the database, not just by application code.
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+/// A pending magic-link invitation. Only the SHA-256 of the token is stored,
+/// so a database leak cannot be replayed into workspace access.
+model Invitation {
+  id         String        @id @default(cuid())
+  email      String
+  role       WorkspaceRole @default(MEMBER)
+  tokenHash  String        @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedById String?
+  invitedBy   User?     @relation("InvitationsSent", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([email])
 }
 
 model Project {
@@ -55,18 +121,22 @@ model Project {
   priority Priority  @default(NO_PRIORITY)
   dueDate  DateTime?
 
-  /// Workspace scoping: every project belongs to the signed-in user who owns it.
-  ownerId String
-  owner   User    @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  leadId  String?
-  lead    User?   @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+  /// The workspace owns the project; membership is what grants access.
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Attribution only — nullable so removing a user keeps their work.
+  createdById String?
+  createdBy   User?   @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  leadId      String?
+  lead        User?   @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
 
   tasks Task[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([ownerId])
+  @@index([workspaceId])
 }
 
 model Task {
@@ -80,12 +150,17 @@ model Task {
   /// Fractional ordering key within a status column (Kanban drag & drop).
   position    Float      @default(0)
 
-  ownerId    String
-  owner      User     @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  projectId  String?
-  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  reporterId String?
-  reporter   User?    @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  /// The workspace owns the task; membership is what grants access.
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Attribution only — nullable so removing a user keeps their work.
+  createdById String?
+  createdBy   User?    @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporterId  String?
+  reporter    User?    @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: SetNull)
 
   /// Subtasks are tasks with a parent.
   parentId String?
@@ -101,7 +176,9 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([ownerId, status, position])
+  /// Matches the board's main query: scope by workspace, group by status,
+  /// order by position.
+  @@index([workspaceId, status, position])
   @@index([parentId])
 }
 
