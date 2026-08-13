@@ -2,7 +2,10 @@
 
 A production-grade task management app built for the AbleSpace Full Stack Developer technical assessment, implementing the provided Figma design: Kanban board + list views, task detail with subtasks/comments/activity, projects, Google OAuth + Guest login, and a persistent theme system (light/dark × six accent colors).
 
-**Live demo:** _URL added at deployment_ · **API docs (Swagger):** `<backend-url>/api/docs` · **Health:** `<backend-url>/api/health`
+**Live demo:** https://pyramid-dun.vercel.app · **API docs (Swagger):** https://pyramid-api-k7ea.onrender.com/api/docs · **Health:** https://pyramid-dun.vercel.app/api/health
+
+> Sign in with Google, or use **Continue as Guest** for a pre-populated demo workspace — no account needed.
+> The API runs on Render's free tier and sleeps when idle, so the very first request after a quiet spell can take ~50s to wake.
 
 | | |
 |---|---|

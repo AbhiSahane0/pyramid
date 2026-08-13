@@ -38,3 +38,6 @@ coverage/
 
 # backups
 *.sql
+# Part 2 write-up — personal working files, not part of the submitted codebase
+/part-2/
+part-2-*.md
