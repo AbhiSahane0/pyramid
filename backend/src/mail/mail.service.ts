@@ -2,6 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 
+/**
+ * Outcome of a send. `reason` is only set when `sent` is false, and carries the
+ * provider's own words: the difference between "no provider configured" and
+ * "the provider refused this recipient" matters to whoever is inviting, and
+ * only one of those is something they can act on.
+ */
+export interface MailResult {
+  sent: boolean;
+  reason?: string;
+}
+
 interface WorkspaceInviteMail {
   to: string;
   inviterName: string;
@@ -37,15 +48,15 @@ export class MailService {
     }
   }
 
-  /** Returns whether the message actually left the building. */
-  async sendWorkspaceInvite(invite: WorkspaceInviteMail): Promise<boolean> {
+  /** Returns whether the message left the building, and why not if it didn't. */
+  async sendWorkspaceInvite(invite: WorkspaceInviteMail): Promise<MailResult> {
     const subject = `${invite.inviterName} invited you to ${invite.workspaceName} on Pyramid`;
 
     if (!this.resend) {
       this.logger.log(
         `[email disabled] Invite for ${invite.to} → ${invite.inviteUrl}`,
       );
-      return false;
+      return { sent: false };
     }
 
     try {
@@ -67,15 +78,17 @@ export class MailService {
           `Resend rejected the invite to ${invite.to}`,
           error.message,
         );
-        return false;
+        return { sent: false, reason: error.message };
       }
-      return true;
+      return { sent: true };
     } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : 'the email provider failed';
       this.logger.error(
         `Could not send the invite to ${invite.to}`,
         error instanceof Error ? error.stack : String(error),
       );
-      return false;
+      return { sent: false, reason };
     }
   }
 

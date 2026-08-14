@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Loader2, Send } from "lucide-react";
+import { Check, Copy, Loader2, Send, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,7 +92,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
             {created
               ? created.emailed
                 ? `We emailed ${created.email}. You can also share this link directly.`
-                : `Share this link with ${created.email} — email delivery isn't configured, so it won't arrive on its own.`
+                : `Send this link to ${created.email} to add them to the workspace.`
               : "They'll get a link that adds them to this workspace. It expires in 7 days and works once."}
           </DialogDescription>
         </DialogHeader>
@@ -100,6 +100,25 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
         {created ? (
           <div className="space-y-4">
             <CopyLinkField url={created.inviteUrl} />
+            {created.deliveryError ? (
+              <div className="flex gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <TriangleAlert
+                  className="mt-0.5 size-4 shrink-0 text-amber-600"
+                  aria-hidden
+                />
+                <div className="min-w-0 space-y-1">
+                  <p className="text-xs font-semibold">
+                    The email couldn&apos;t be delivered
+                  </p>
+                  <p className="text-xs break-words text-muted-foreground">
+                    {created.deliveryError}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    The invitation itself is valid — share the link above instead.
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               Only {created.email} can accept it — a forwarded link won&apos;t work for
               anyone else.

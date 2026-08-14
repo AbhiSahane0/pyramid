@@ -171,8 +171,14 @@ export interface Invitation {
 export interface CreatedInvitation extends Invitation {
   /** Returned once, at creation, so the UI can offer a copyable link. */
   inviteUrl: string;
-  /** False when no email provider is configured — share the link manually. */
+  /** True when the email provider accepted the message. */
   emailed: boolean;
+  /**
+   * The provider's own explanation when it refused. Absent when the send
+   * succeeded, and also when no provider is configured — so the UI can tell
+   * "not set up" apart from "set up, but rejected this recipient".
+   */
+  deliveryError?: string;
 }
 
 export interface InvitationPreview {

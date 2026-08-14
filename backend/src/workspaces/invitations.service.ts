@@ -30,7 +30,14 @@ export interface CreatedInvitation extends PendingInvitation {
    * copyable link. It is never stored and never readable again.
    */
   inviteUrl: string;
+  /** True when the provider accepted the message. */
   emailed: boolean;
+  /**
+   * Why it wasn't emailed, when we know. Absent both when the send succeeded
+   * and when no provider is configured at all — the UI distinguishes those two
+   * cases from `emailed` alone.
+   */
+  deliveryError?: string;
 }
 
 @Injectable()
@@ -92,7 +99,7 @@ export class InvitationsService {
 
     const inviteUrl = `${resolveFrontendUrl(this.config.get<string>('FRONTEND_URL'))}/invite/${token}`;
 
-    const emailed = await this.mail.sendWorkspaceInvite({
+    const delivery = await this.mail.sendWorkspaceInvite({
       to: normalizedEmail,
       inviterName: invitedBy.name,
       workspaceName: invitation.workspace.name,
@@ -108,7 +115,8 @@ export class InvitationsService {
       createdAt: invitation.createdAt,
       invitedByName: invitedBy.name,
       inviteUrl,
-      emailed,
+      emailed: delivery.sent,
+      deliveryError: delivery.reason,
     };
   }
 

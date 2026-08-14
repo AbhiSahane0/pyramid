@@ -319,11 +319,14 @@ export function useInviteMember() {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.workspaceInvitations,
       });
-      toast.success(
-        invitation.emailed
-          ? `Invitation sent to ${invitation.email}`
-          : "Invitation created — copy the link to share it",
-      );
+      if (invitation.emailed) {
+        toast.success(`Invitation sent to ${invitation.email}`);
+      } else {
+        // The invite is valid either way; only delivery failed.
+        toast.warning("Invitation created, but the email didn't send", {
+          description: "Copy the link from the dialog to share it.",
+        });
+      }
     },
     onError: (error) => toast.error(error.message),
   });
