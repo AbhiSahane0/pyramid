@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login"];
+// /invite is public: an invitee arrives signed out, and the page itself
+// explains which account to sign in with.
+const PUBLIC_ROUTES = ["/login", "/invite"];
 
 /**
  * Route protection at the edge. Presence of the long-lived refresh cookie is
@@ -17,7 +19,10 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.redirect(login);
   }
 
-  if (hasSession && (isPublic || pathname === "/")) {
+  // An invite link is meaningful whether or not you already have a session,
+  // so it is the one public route we never redirect away from.
+  const isInvite = pathname.startsWith("/invite");
+  if (hasSession && !isInvite && (isPublic || pathname === "/")) {
     return NextResponse.redirect(new URL("/tasks", request.url));
   }
 

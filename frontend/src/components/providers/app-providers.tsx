@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { TourProvider } from "@/components/onboarding/use-tour";
 import { Toaster } from "@/components/ui/sonner";
 import { ColorModeProvider } from "./color-mode-provider";
+import { WorkspaceProvider } from "./workspace-provider";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -30,10 +31,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
         disableTransitionOnChange
       >
         <ColorModeProvider>
-          <TourProvider>
-            {children}
-            <Toaster position="bottom-right" />
-          </TourProvider>
+          <WorkspaceProvider>
+            <TourProvider>
+              {children}
+              <Toaster position="bottom-right" />
+            </TourProvider>
+          </WorkspaceProvider>
         </ColorModeProvider>
       </ThemeProvider>
     </QueryClientProvider>

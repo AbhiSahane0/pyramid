@@ -4,6 +4,7 @@ import { ChevronDown, LayoutGrid, Package, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -40,6 +41,9 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem data-tour="user-menu">
             <UserMenu />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <WorkspaceSwitcher />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

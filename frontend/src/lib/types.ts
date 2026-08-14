@@ -140,3 +140,56 @@ export const PRIORITY_META: Record<
   MEDIUM: { label: "Medium", textClass: "text-orange-500 dark:text-orange-400", bars: 2 },
   LOW: { label: "Low", textClass: "text-muted-foreground", bars: 1 },
 };
+
+// --- Workspaces ---
+
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface Workspace {
+  id: string;
+  name: string;
+  /** The signed-in user's role in this workspace. */
+  role: WorkspaceRole;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface WorkspaceMember extends User {
+  role: WorkspaceRole;
+  joinedAt: string;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: WorkspaceRole;
+  expiresAt: string;
+  createdAt: string;
+  invitedByName: string | null;
+}
+
+export interface CreatedInvitation extends Invitation {
+  /** Returned once, at creation, so the UI can offer a copyable link. */
+  inviteUrl: string;
+  /** False when no email provider is configured — share the link manually. */
+  emailed: boolean;
+}
+
+export interface InvitationPreview {
+  email: string;
+  role: WorkspaceRole;
+  workspaceName: string;
+  invitedByName: string | null;
+  expiresAt: string;
+}
+
+/** Ranking for "at least this role" checks, mirroring the backend. */
+const ROLE_RANK: Record<WorkspaceRole, number> = {
+  MEMBER: 0,
+  ADMIN: 1,
+  OWNER: 2,
+};
+
+export function hasAtLeast(role: WorkspaceRole, required: WorkspaceRole): boolean {
+  return ROLE_RANK[role] >= ROLE_RANK[required];
+}

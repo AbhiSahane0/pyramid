@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -27,9 +27,13 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const errorMessage = OAUTH_ERRORS[searchParams.get("error") ?? ""];
 
+  const queryClient = useQueryClient();
   const guestLogin = useMutation({
     mutationFn: api.auth.guestLogin,
     onSuccess: () => {
+      // Anything cached belongs to the signed-out state, including the failed
+      // workspaces lookup that decides which board to show.
+      queryClient.clear();
       router.push("/tasks");
       router.refresh();
     },

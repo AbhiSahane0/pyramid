@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Palette, Search, SunMedium, UserRound } from "lucide-react";
+import { ArrowLeft, Palette, Search, SunMedium, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { title: "Profile", href: "/settings", icon: UserRound },
   { title: "Theme", href: "/settings/theme", icon: SunMedium },
   { title: "Color", href: "/settings/color", icon: Palette },
+  { title: "Members", href: "/settings/members", icon: Users },
 ];
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {

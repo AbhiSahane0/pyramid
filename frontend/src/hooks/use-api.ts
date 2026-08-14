@@ -9,7 +9,7 @@ import {
   type ProjectInput,
   type UpdateTaskInput,
 } from "@/lib/api";
-import type { Task, TaskFilters, TaskStatus } from "@/lib/types";
+import type { Task, TaskFilters, TaskStatus, WorkspaceRole } from "@/lib/types";
 
 export const queryKeys = {
   me: ["me"] as const,
@@ -18,12 +18,23 @@ export const queryKeys = {
   projects: ["projects"] as const,
   members: ["members"] as const,
   labels: ["labels"] as const,
+  workspaces: ["workspaces"] as const,
+  workspaceMembers: ["workspace-members"] as const,
+  workspaceInvitations: ["workspace-invitations"] as const,
 };
 
 // --- Auth / users ---
 
 export function useMe() {
-  return useQuery({ queryKey: queryKeys.me, queryFn: api.auth.me, staleTime: 60_000 });
+  return useQuery({
+    queryKey: queryKeys.me,
+    queryFn: api.auth.me,
+    staleTime: 60_000,
+    // A 401 here is a definitive answer — "not signed in" — not a transient
+    // failure. Retrying it only burns round-trips and leaves pages that render
+    // a signed-out state (the invite page) stuck on a skeleton meanwhile.
+    retry: false,
+  });
 }
 
 export function useLogout() {
@@ -255,5 +266,130 @@ export function useDeleteProject() {
       toast.success("Project deleted");
     },
     onError: (error) => toast.error(error.message),
+  });
+}
+
+// --- Workspaces ---
+
+export function useWorkspaceMembers() {
+  return useQuery({
+    queryKey: queryKeys.workspaceMembers,
+    queryFn: api.workspaces.members,
+  });
+}
+
+export function useWorkspaceInvitations(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.workspaceInvitations,
+    queryFn: api.workspaces.invitations,
+    // Only admins may list invitations; asking as a member would 403.
+    enabled,
+  });
+}
+
+export function useCreateWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.workspaces.create,
+    onSuccess: (workspace) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      toast.success(`Created "${workspace.name}"`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useRenameWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.workspaces.rename,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      toast.success("Workspace renamed");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useInviteMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.workspaces.invite,
+    onSuccess: (invitation) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaceInvitations,
+      });
+      toast.success(
+        invitation.emailed
+          ? `Invitation sent to ${invitation.email}`
+          : "Invitation created — copy the link to share it",
+      );
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useRevokeInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.workspaces.revokeInvitation,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaceInvitations,
+      });
+      toast.success("Invitation revoked");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useUpdateMemberRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: WorkspaceRole }) =>
+      api.workspaces.updateMemberRole(userId, role),
+    onSuccess: (member) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaceMembers });
+      toast.success(`${member.name} is now ${member.role.toLowerCase()}`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.workspaces.removeMember,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaceMembers });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      toast.success("Member removed");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useLeaveWorkspaceTeam() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  return useMutation({
+    mutationFn: api.workspaces.leave,
+    onSuccess: () => {
+      queryClient.clear();
+      router.push("/tasks");
+      router.refresh();
+      toast.success("You left the workspace");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.invitations.accept,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
   });
 }

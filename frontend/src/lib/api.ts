@@ -1,4 +1,10 @@
 import type {
+  CreatedInvitation,
+  Invitation,
+  InvitationPreview,
+  Workspace,
+  WorkspaceMember,
+  WorkspaceRole,
   Comment,
   Label,
   Priority,
@@ -49,11 +55,31 @@ function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
+/**
+ * Which workspace the API should act on. Held at module scope rather than in
+ * React state so every request picks it up without threading it through call
+ * sites; the WorkspaceProvider is the only writer.
+ */
+let activeWorkspaceId: string | null = null;
+
+export function setActiveWorkspaceId(id: string | null): void {
+  activeWorkspaceId = id;
+}
+
+export function getActiveWorkspaceId(): string | null {
+  return activeWorkspaceId;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  // Omitted on purpose when unset: the API falls back to the caller's first
+  // workspace, so the very first load works before one has been chosen.
+  if (activeWorkspaceId) headers["x-workspace-id"] = activeWorkspaceId;
+
   const response = await fetch(`/api${path}`, {
     method: options.method ?? "GET",
-    headers:
-      options.body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     credentials: "include",
   });
@@ -66,7 +92,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     // Session fully expired. Clear the dead cookies first — otherwise the
     // route-protection proxy still sees a refresh cookie and would bounce
     // /login straight back here in a redirect loop.
-    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    // The invite page renders its own signed-out state, so bouncing away from
+    // it would lose the link the user just clicked.
+    const currentPath = typeof window === "undefined" ? "" : window.location.pathname;
+    if (
+      typeof window !== "undefined" &&
+      !currentPath.startsWith("/login") &&
+      !currentPath.startsWith("/invite")
+    ) {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(
         () => undefined,
       );
@@ -181,5 +214,43 @@ export const api = {
   },
   labels: {
     list: () => request<Label[]>("/labels"),
+  },
+  workspaces: {
+    list: () => request<Workspace[]>("/workspaces"),
+    create: (input: { name: string }) =>
+      request<Workspace>("/workspaces", { method: "POST", body: input }),
+    rename: (input: { name: string }) =>
+      request<Workspace>("/workspaces/current", { method: "PATCH", body: input }),
+    remove: () => request<void>("/workspaces/current", { method: "DELETE" }),
+    leave: () =>
+      request<{ success: boolean }>("/workspaces/current/leave", { method: "POST" }),
+
+    members: () => request<WorkspaceMember[]>("/workspaces/current/members"),
+    updateMemberRole: (userId: string, role: WorkspaceRole) =>
+      request<WorkspaceMember>(`/workspaces/current/members/${userId}`, {
+        method: "PATCH",
+        body: { role },
+      }),
+    removeMember: (userId: string) =>
+      request<void>(`/workspaces/current/members/${userId}`, { method: "DELETE" }),
+
+    invitations: () => request<Invitation[]>("/workspaces/current/invitations"),
+    invite: (input: { email: string; role: WorkspaceRole }) =>
+      request<CreatedInvitation>("/workspaces/current/invitations", {
+        method: "POST",
+        body: input,
+      }),
+    revokeInvitation: (invitationId: string) =>
+      request<void>(`/workspaces/current/invitations/${invitationId}`, {
+        method: "DELETE",
+      }),
+  },
+  invitations: {
+    /** Public: describes an invite without consuming it. */
+    preview: (token: string) => request<InvitationPreview>(`/invitations/${token}`),
+    accept: (token: string) =>
+      request<{ workspaceId: string }>(`/invitations/${token}/accept`, {
+        method: "POST",
+      }),
   },
 };
