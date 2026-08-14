@@ -55,8 +55,7 @@ export class AuthService {
     // Real accounts start empty: the app's own empty states guide the user
     // into creating their first project/task. Only the shared member and
     // label catalogue is ensured so pickers are populated.
-    await this.workspaceSeed.seedGlobals();
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         googleId: profile.googleId,
         email: profile.email,
@@ -65,6 +64,8 @@ export class AuthService {
         username: profile.email.split('@')[0],
       },
     });
+    await this.workspaceSeed.createPersonalWorkspace(user.id, user.name, false);
+    return user;
   }
 
   /** Creates a temporary, clearly-flagged guest user with its own demo workspace. */
@@ -78,7 +79,7 @@ export class AuthService {
         isGuest: true,
       },
     });
-    await this.workspaceSeed.seedForUser(user.id);
+    await this.workspaceSeed.createPersonalWorkspace(user.id, user.name, true);
     return user;
   }
 

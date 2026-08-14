@@ -19,17 +19,17 @@ export type ProjectWithLead = Prisma.ProjectGetPayload<{
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(ownerId: string): Promise<ProjectWithLead[]> {
+  findAll(workspaceId: string): Promise<ProjectWithLead[]> {
     return this.prisma.project.findMany({
-      where: { ownerId },
+      where: { workspaceId },
       include: projectInclude,
       orderBy: { createdAt: 'asc' },
     });
   }
 
-  async findOne(ownerId: string, id: string): Promise<ProjectWithLead> {
+  async findOne(workspaceId: string, id: string): Promise<ProjectWithLead> {
     const project = await this.prisma.project.findFirst({
-      where: { id, ownerId },
+      where: { id, workspaceId },
       include: projectInclude,
     });
     if (!project) {
@@ -38,25 +38,30 @@ export class ProjectsService {
     return project;
   }
 
-  create(ownerId: string, dto: CreateProjectDto): Promise<ProjectWithLead> {
+  create(
+    workspaceId: string,
+    actorId: string,
+    dto: CreateProjectDto,
+  ): Promise<ProjectWithLead> {
     return this.prisma.project.create({
       data: {
         name: dto.name,
         priority: dto.priority,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         leadId: dto.leadId,
-        ownerId,
+        workspaceId,
+        createdById: actorId,
       },
       include: projectInclude,
     });
   }
 
   async update(
-    ownerId: string,
+    workspaceId: string,
     id: string,
     dto: UpdateProjectDto,
   ): Promise<ProjectWithLead> {
-    await this.findOne(ownerId, id);
+    await this.findOne(workspaceId, id);
     return this.prisma.project.update({
       where: { id },
       data: {
@@ -69,8 +74,8 @@ export class ProjectsService {
     });
   }
 
-  async remove(ownerId: string, id: string): Promise<void> {
-    await this.findOne(ownerId, id);
+  async remove(workspaceId: string, id: string): Promise<void> {
+    await this.findOne(workspaceId, id);
     await this.prisma.project.delete({ where: { id } });
   }
 }

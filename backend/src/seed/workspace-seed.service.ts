@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Label, User } from '@prisma/client';
+import { Label, User, WorkspaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   DEMO_LABELS,
@@ -53,8 +53,42 @@ export class WorkspaceSeedService {
     return { members, labels };
   }
 
-  /** Creates the demo projects and tasks owned by the given user. */
-  async seedForUser(ownerId: string): Promise<void> {
+  /**
+   * Every account needs somewhere to work, so sign-up creates a personal
+   * workspace with the new user as its OWNER.
+   *
+   * Guests get the demo content (they exist to show the app off); real accounts
+   * start empty and meet the app's own empty states instead of someone else's
+   * sample data.
+   */
+  async createPersonalWorkspace(
+    userId: string,
+    displayName: string,
+    withDemoContent: boolean,
+  ): Promise<string> {
+    const workspace = await this.prisma.workspace.create({
+      data: {
+        name: `${displayName}'s Workspace`,
+        members: { create: { userId, role: WorkspaceRole.OWNER } },
+      },
+    });
+
+    if (withDemoContent) {
+      await this.seedForWorkspace(workspace.id, userId);
+    } else {
+      // Still ensure the shared member/label catalogue exists so the pickers
+      // are populated on an otherwise empty board.
+      await this.seedGlobals();
+    }
+
+    return workspace.id;
+  }
+
+  /**
+   * Fills a brand-new workspace with the demo content from the design.
+   * `actorId` is the person who triggered it — used for attribution only.
+   */
+  async seedForWorkspace(workspaceId: string, actorId: string): Promise<void> {
     const { members, labels } = await this.seedGlobals();
 
     const projectByName = new Map<string, string>();
@@ -64,7 +98,8 @@ export class WorkspaceSeedService {
           name: p.name,
           priority: p.priority,
           dueDate: new Date(p.dueDate),
-          ownerId,
+          workspaceId,
+          createdById: actorId,
           leadId: p.leadKey ? members.get(p.leadKey)?.id : undefined,
         },
       });
@@ -82,8 +117,9 @@ export class WorkspaceSeedService {
           priority: t.priority,
           dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
           position,
-          ownerId,
-          reporterId: t.reporterKey ? members.get(t.reporterKey)?.id : ownerId,
+          workspaceId,
+          createdById: actorId,
+          reporterId: t.reporterKey ? members.get(t.reporterKey)?.id : actorId,
           projectId: t.projectName
             ? projectByName.get(t.projectName)
             : undefined,
@@ -112,9 +148,10 @@ export class WorkspaceSeedService {
             priority: s.priority,
             dueDate: new Date(s.dueDate),
             position: subPosition,
-            ownerId,
+            workspaceId,
+            createdById: actorId,
             parentId: task.id,
-            reporterId: ownerId,
+            reporterId: actorId,
             members: s.memberKey
               ? { connect: { id: members.get(s.memberKey)!.id } }
               : undefined,
@@ -137,13 +174,13 @@ export class WorkspaceSeedService {
           data: [
             {
               taskId: task.id,
-              actorId: ownerId,
+              actorId,
               type: 'update_posted',
               meta: { text: 'posted an update' },
             },
             {
               taskId: task.id,
-              actorId: ownerId,
+              actorId,
               type: 'priority_changed',
               meta: { from: 'No priority', to: 'High' },
             },
@@ -152,6 +189,6 @@ export class WorkspaceSeedService {
       }
     }
 
-    this.logger.log(`Seeded demo workspace for user ${ownerId}`);
+    this.logger.log(`Seeded demo content into workspace ${workspaceId}`);
   }
 }

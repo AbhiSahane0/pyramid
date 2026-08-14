@@ -18,6 +18,7 @@ describe('Pyramid API (e2e)', () => {
   let authService: AuthService;
   let cookies: string[];
   let createdTaskId: string;
+  let workspaceId: string;
 
   const agent = () => request(app.getHttpServer());
   const authed = (req: request.Test) => req.set('Cookie', cookies);
@@ -92,9 +93,18 @@ describe('Pyramid API (e2e)', () => {
     const user = await authService.loginWithGoogle(profile);
     try {
       expect(user.isGuest).toBe(false);
+
+      // Sign-up still provisions a workspace — it is just an empty one.
+      const membership = await prisma.membership.findFirst({
+        where: { userId: user.id },
+      });
+      expect(membership?.role).toBe('OWNER');
+
       const [tasks, projects] = await Promise.all([
-        prisma.task.count({ where: { ownerId: user.id } }),
-        prisma.project.count({ where: { ownerId: user.id } }),
+        prisma.task.count({ where: { workspaceId: membership!.workspaceId } }),
+        prisma.project.count({
+          where: { workspaceId: membership!.workspaceId },
+        }),
       ]);
       expect(tasks).toBe(0);
       expect(projects).toBe(0);
@@ -165,6 +175,88 @@ describe('Pyramid API (e2e)', () => {
       .expect(404);
 
     await agent().delete('/api/users/me').set('Cookie', otherCookies);
+  });
+
+  // --- Workspaces, membership and invitations ---
+
+  it('provisions a workspace with the signer-up as OWNER', async () => {
+    const response = await authed(agent().get('/api/workspaces')).expect(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].role).toBe('OWNER');
+    workspaceId = response.body[0].id;
+  });
+
+  it('hides a workspace from everyone who is not a member', async () => {
+    const outsider = await agent().post('/api/auth/guest').expect(201);
+    const outsiderCookies = (outsider.get('Set-Cookie') ?? []).map(
+      (cookie: string) => cookie.split(';')[0],
+    );
+
+    // 404 rather than 403: never confirm that the workspace exists.
+    await agent()
+      .get('/api/tasks')
+      .set('Cookie', outsiderCookies)
+      .set('x-workspace-id', workspaceId)
+      .expect(404);
+
+    await agent().delete('/api/users/me').set('Cookie', outsiderCookies);
+  });
+
+  it('stores only the hash of an invitation token', async () => {
+    const response = await authed(
+      agent()
+        .post('/api/workspaces/current/invitations')
+        .set('x-workspace-id', workspaceId)
+        .send({ email: 'invitee@example.com', role: 'MEMBER' }),
+    ).expect(201);
+
+    const token = (response.body.inviteUrl as string).split('/').pop()!;
+    expect(token.length).toBeGreaterThan(20);
+
+    const stored = await prisma.invitation.findFirst({
+      where: { workspaceId, email: 'invitee@example.com' },
+    });
+    // The raw token must never be recoverable from the database.
+    expect(stored?.tokenHash).not.toContain(token);
+    expect(stored?.acceptedAt).toBeNull();
+
+    // Anyone can describe an invite, but describing must not consume it.
+    const preview = await agent().get(`/api/invitations/${token}`).expect(200);
+    expect(preview.body.email).toBe('invitee@example.com');
+    expect(
+      (await prisma.invitation.findFirst({ where: { id: stored!.id } }))
+        ?.acceptedAt,
+    ).toBeNull();
+  });
+
+  it('refuses an invitation redeemed by a different account', async () => {
+    const invite = await authed(
+      agent()
+        .post('/api/workspaces/current/invitations')
+        .set('x-workspace-id', workspaceId)
+        .send({ email: 'someone-else@example.com' }),
+    ).expect(201);
+    const token = (invite.body.inviteUrl as string).split('/').pop()!;
+
+    // The signed-in guest's address is not the invited one.
+    await authed(agent().post(`/api/invitations/${token}/accept`)).expect(403);
+  });
+
+  it('rejects an expired invitation', async () => {
+    const invite = await authed(
+      agent()
+        .post('/api/workspaces/current/invitations')
+        .set('x-workspace-id', workspaceId)
+        .send({ email: 'late@example.com' }),
+    ).expect(201);
+    const token = (invite.body.inviteUrl as string).split('/').pop()!;
+
+    await prisma.invitation.updateMany({
+      where: { email: 'late@example.com', workspaceId },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    await agent().get(`/api/invitations/${token}`).expect(400);
   });
 
   it('rotates tokens on refresh and revokes them on logout', async () => {

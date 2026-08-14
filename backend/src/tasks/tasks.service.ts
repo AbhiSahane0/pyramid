@@ -77,9 +77,9 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 export class TasksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(ownerId: string, query: TaskQueryDto): Promise<TaskListItem[]> {
+  findAll(workspaceId: string, query: TaskQueryDto): Promise<TaskListItem[]> {
     const where: Prisma.TaskWhereInput = {
-      ownerId,
+      workspaceId,
       parentId: null,
       status: query.status,
       priority: query.priority,
@@ -101,9 +101,9 @@ export class TasksService {
     });
   }
 
-  async findOne(ownerId: string, id: string): Promise<TaskDetail> {
+  async findOne(workspaceId: string, id: string): Promise<TaskDetail> {
     const task = await this.prisma.task.findFirst({
-      where: { id, ownerId },
+      where: { id, workspaceId },
       include: detailInclude,
     });
     if (!task) {
@@ -112,7 +112,11 @@ export class TasksService {
     return task;
   }
 
-  async create(ownerId: string, dto: CreateTaskDto): Promise<TaskDetail> {
+  async create(
+    workspaceId: string,
+    actorId: string,
+    dto: CreateTaskDto,
+  ): Promise<TaskDetail> {
     const status = dto.status ?? TaskStatus.TODO;
     const task = await this.prisma.task.create({
       data: {
@@ -122,11 +126,12 @@ export class TasksService {
         priority: dto.priority ?? Priority.NO_PRIORITY,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-        position: await this.nextPosition(ownerId, status, dto.parentId),
-        ownerId,
+        position: await this.nextPosition(workspaceId, status, dto.parentId),
+        workspaceId,
+        createdById: actorId,
         projectId: dto.projectId,
         parentId: dto.parentId,
-        reporterId: dto.reporterId ?? ownerId,
+        reporterId: dto.reporterId ?? actorId,
         members: dto.memberIds
           ? { connect: dto.memberIds.map((id) => ({ id })) }
           : undefined,
@@ -140,11 +145,12 @@ export class TasksService {
   }
 
   async update(
-    ownerId: string,
+    workspaceId: string,
+    actorId: string,
     id: string,
     dto: UpdateTaskDto,
   ): Promise<TaskDetail> {
-    const existing = await this.requireOwned(ownerId, id);
+    const existing = await this.requireInWorkspace(workspaceId, id);
 
     const data: Prisma.TaskUpdateInput = {
       title: dto.title,
@@ -186,7 +192,7 @@ export class TasksService {
     // Status changed outside drag & drop: append to the end of the new column.
     if (dto.status && dto.status !== existing.status) {
       data.position = await this.nextPosition(
-        ownerId,
+        workspaceId,
         dto.status,
         existing.parentId,
       );
@@ -194,7 +200,7 @@ export class TasksService {
 
     // Log before fetching the updated detail so the response includes the
     // fresh activity entries.
-    await this.logChanges(existing, dto, ownerId);
+    await this.logChanges(existing, dto, actorId);
 
     return this.prisma.task.update({
       where: { id },
@@ -203,8 +209,13 @@ export class TasksService {
     });
   }
 
-  async move(ownerId: string, id: string, dto: MoveTaskDto): Promise<Task> {
-    const existing = await this.requireOwned(ownerId, id);
+  async move(
+    workspaceId: string,
+    actorId: string,
+    id: string,
+    dto: MoveTaskDto,
+  ): Promise<Task> {
+    const existing = await this.requireInWorkspace(workspaceId, id);
     const task = await this.prisma.task.update({
       where: { id },
       data: { status: dto.status, position: dto.position },
@@ -213,7 +224,7 @@ export class TasksService {
       await this.prisma.activity.create({
         data: {
           taskId: id,
-          actorId: ownerId,
+          actorId,
           type: 'status_changed',
           meta: {
             from: STATUS_LABELS[existing.status],
@@ -225,15 +236,20 @@ export class TasksService {
     return task;
   }
 
-  async remove(ownerId: string, id: string): Promise<void> {
-    await this.requireOwned(ownerId, id);
+  async remove(workspaceId: string, id: string): Promise<void> {
+    await this.requireInWorkspace(workspaceId, id);
     await this.prisma.task.delete({ where: { id } });
   }
 
   // --- Comments ---
 
-  async addComment(ownerId: string, taskId: string, dto: CreateCommentDto) {
-    await this.requireOwned(ownerId, taskId);
+  async addComment(
+    workspaceId: string,
+    authorId: string,
+    taskId: string,
+    dto: CreateCommentDto,
+  ) {
+    await this.requireInWorkspace(workspaceId, taskId);
     if (dto.parentId) {
       const parent = await this.prisma.comment.findFirst({
         where: { id: dto.parentId, taskId },
@@ -246,22 +262,31 @@ export class TasksService {
       data: {
         body: dto.body,
         taskId,
-        authorId: ownerId,
+        authorId,
         parentId: dto.parentId,
       },
       include: { author: memberSelect },
     });
   }
 
-  async deleteComment(ownerId: string, commentId: string): Promise<void> {
+  /**
+   * Authors delete their own comments; workspace admins can moderate anyone's.
+   * `canModerate` is derived from the caller's role by the controller.
+   */
+  async deleteComment(
+    workspaceId: string,
+    actorId: string,
+    commentId: string,
+    canModerate: boolean,
+  ): Promise<void> {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-      include: { task: { select: { ownerId: true } } },
+      include: { task: { select: { workspaceId: true } } },
     });
-    if (!comment || comment.task.ownerId !== ownerId) {
+    if (!comment || comment.task.workspaceId !== workspaceId) {
       throw new NotFoundException('Comment not found');
     }
-    if (comment.authorId !== ownerId && comment.task.ownerId !== ownerId) {
+    if (comment.authorId !== actorId && !canModerate) {
       throw new ForbiddenException('You cannot delete this comment');
     }
     await this.prisma.comment.delete({ where: { id: commentId } });
@@ -269,19 +294,23 @@ export class TasksService {
 
   // --- Resources ---
 
-  async addResource(ownerId: string, taskId: string, dto: CreateResourceDto) {
-    await this.requireOwned(ownerId, taskId);
+  async addResource(
+    workspaceId: string,
+    taskId: string,
+    dto: CreateResourceDto,
+  ) {
+    await this.requireInWorkspace(workspaceId, taskId);
     return this.prisma.resource.create({
       data: { name: dto.name, url: dto.url, taskId },
     });
   }
 
-  async removeResource(ownerId: string, resourceId: string): Promise<void> {
+  async removeResource(workspaceId: string, resourceId: string): Promise<void> {
     const resource = await this.prisma.resource.findUnique({
       where: { id: resourceId },
-      include: { task: { select: { ownerId: true } } },
+      include: { task: { select: { workspaceId: true } } },
     });
-    if (!resource || resource.task.ownerId !== ownerId) {
+    if (!resource || resource.task.workspaceId !== workspaceId) {
       throw new NotFoundException('Resource not found');
     }
     await this.prisma.resource.delete({ where: { id: resourceId } });
@@ -289,8 +318,14 @@ export class TasksService {
 
   // --- Helpers ---
 
-  private async requireOwned(ownerId: string, id: string): Promise<Task> {
-    const task = await this.prisma.task.findFirst({ where: { id, ownerId } });
+  /** 404 rather than 403 for another workspace's task: never confirm it exists. */
+  private async requireInWorkspace(
+    workspaceId: string,
+    id: string,
+  ): Promise<Task> {
+    const task = await this.prisma.task.findFirst({
+      where: { id, workspaceId },
+    });
     if (!task) {
       throw new NotFoundException(`Task ${id} not found`);
     }
@@ -299,12 +334,12 @@ export class TasksService {
 
   /** Next position at the end of a column (or subtask list). */
   private async nextPosition(
-    ownerId: string,
+    workspaceId: string,
     status: TaskStatus,
     parentId?: string | null,
   ): Promise<number> {
     const last = await this.prisma.task.findFirst({
-      where: { ownerId, status, parentId: parentId ?? null },
+      where: { workspaceId, status, parentId: parentId ?? null },
       orderBy: { position: 'desc' },
       select: { position: true },
     });
