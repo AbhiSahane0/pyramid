@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LayoutGrid, Package, TriangleAlert } from "lucide-react";
+import { ChevronDown, LayoutGrid, Package, TriangleAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
@@ -29,6 +29,7 @@ import {
 const NAV_ITEMS = [
   { title: "Tasks", href: "/tasks", icon: LayoutGrid },
   { title: "Projects", href: "/projects", icon: Package },
+  { title: "Members", href: "/members", icon: Users },
 ];
 
 export function AppSidebar() {
