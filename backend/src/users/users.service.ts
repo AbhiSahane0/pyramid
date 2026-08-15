@@ -7,10 +7,24 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Demo personas + the current user — everyone who can be assigned to a task. */
-  async findAssignableMembers(currentUserId: string): Promise<User[]> {
+  /**
+   * Everyone who can be put on a task in this workspace: its members, plus
+   * anyone already assigned to or reporting one of its tasks.
+   *
+   * That second clause is what keeps the guest tour intact — the demo personas
+   * (Admin, Designer, QA Team…) can never sign in, so they hold no membership,
+   * but they own the seeded cards and their names have to resolve. A real
+   * workspace has no such tasks, so it sees only its own people.
+   */
+  async findAssignableMembers(workspaceId: string): Promise<User[]> {
     return this.prisma.user.findMany({
-      where: { OR: [{ isDemo: true }, { id: currentUserId }] },
+      where: {
+        OR: [
+          { memberships: { some: { workspaceId } } },
+          { memberTasks: { some: { workspaceId } } },
+          { reportedTasks: { some: { workspaceId } } },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
     });
   }

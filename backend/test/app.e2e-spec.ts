@@ -119,6 +119,45 @@ describe('Pyramid API (e2e)', () => {
     }
   });
 
+  it('offers demo personas only where they actually hold tasks', async () => {
+    // Runs on its own throwaway account: it has to create a second workspace,
+    // and the shared session's tests below assume that one still has exactly
+    // one.
+    const guest = await agent().post('/api/auth/guest').expect(201);
+    const guestCookies = (guest.get('Set-Cookie') ?? []).map(
+      (cookie: string) => cookie.split(';')[0],
+    );
+
+    try {
+      // The seeded workspace: the design's cast is assignable there.
+      const demo = await agent()
+        .get('/api/users/members')
+        .set('Cookie', guestCookies)
+        .expect(200);
+      expect(demo.body.map((u: { name: string }) => u.name)).toEqual(
+        expect.arrayContaining(['Admin', 'QA Team']),
+      );
+
+      // A workspace made from scratch is a real team, and must never be
+      // offered someone else's sample colleagues.
+      const fresh = await agent()
+        .post('/api/workspaces')
+        .set('Cookie', guestCookies)
+        .send({ name: 'Real Team' })
+        .expect(201);
+
+      const members = await agent()
+        .get('/api/users/members')
+        .set('Cookie', guestCookies)
+        .set('x-workspace-id', fresh.body.id as string)
+        .expect(200);
+      expect(members.body).toHaveLength(1);
+      expect(members.body[0].name).toBe('Guest');
+    } finally {
+      await agent().delete('/api/users/me').set('Cookie', guestCookies);
+    }
+  });
+
   it('validates task input', async () => {
     const response = await authed(
       agent().post('/api/tasks').send({ title: '' }),

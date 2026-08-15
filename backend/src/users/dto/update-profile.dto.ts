@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUrl,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({ example: 'Dexter' })
@@ -29,4 +36,13 @@ export class UpdateProfileDto {
       'username may only contain letters, numbers, dots, dashes and underscores',
   })
   username?: string;
+
+  @ApiPropertyOptional({
+    description: 'Profile picture. Must be an https URL.',
+    example: 'https://api.dicebear.com/9.x/bottts/png?seed=dexter',
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(500)
+  avatarUrl?: string;
 }

@@ -14,7 +14,11 @@ import type { User } from '@prisma/client';
 import type { Response } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { avatarOptions } from '../common/avatar';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentWorkspace } from '../workspaces/current-workspace.decorator';
+import type { WorkspaceContext } from '../workspaces/workspace-context';
+import { WorkspaceGuard } from '../workspaces/workspace.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { toPublicUser } from './user.mapper';
 import type { PublicUser } from './user.mapper';
@@ -31,10 +35,21 @@ export class UsersController {
   ) {}
 
   @Get('members')
+  @UseGuards(WorkspaceGuard)
   @ApiOperation({ summary: 'Workspace members assignable to tasks' })
-  async members(@CurrentUser() user: User): Promise<PublicUser[]> {
-    const users = await this.usersService.findAssignableMembers(user.id);
+  async members(
+    @CurrentWorkspace() workspace: WorkspaceContext,
+  ): Promise<PublicUser[]> {
+    const users = await this.usersService.findAssignableMembers(
+      workspace.workspaceId,
+    );
     return users.map(toPublicUser);
+  }
+
+  @Get('me/avatars')
+  @ApiOperation({ summary: 'Generated profile pictures to choose from' })
+  avatars(@CurrentUser() user: User): { options: string[] } {
+    return { options: avatarOptions(user.username ?? user.email) };
   }
 
   @Patch('me')
