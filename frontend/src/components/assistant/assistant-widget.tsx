@@ -1,7 +1,9 @@
 "use client";
 
+import { format } from "date-fns";
 import {
   ArrowUp,
+  CalendarCheck,
   Check,
   CircleAlert,
   CornerDownLeft,
@@ -35,6 +37,7 @@ import {
   type AssistantCommand,
   type CommandRunners,
 } from "./commands";
+import { API_DATE, dateShortcuts, describeDate, parseDate } from "./dates";
 import { PickerList, type PickerItem } from "./picker-list";
 
 interface Message {
@@ -74,9 +77,13 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** The "@query" being typed, or null when the menu shouldn't show. */
+/**
+ * The "@query" being typed, or null when the menu shouldn't show. A second
+ * word is allowed so typing a label as it is written — "@create task" — keeps
+ * matching; anything longer is prose, and the menu gets out of the way.
+ */
 function mentionQuery(draft: string): string | null {
-  const match = /(?:^|\s)@([\w-]*)$/.exec(draft);
+  const match = /(?:^|\s)@([\w-]*(?: [\w-]+)?)$/.exec(draft);
   return match ? match[1] : null;
 }
 
@@ -194,6 +201,31 @@ export function AssistantWidget() {
           label: task.title,
           description: STATUS_META[task.status].label,
         }));
+    } else if (currentArg.kind === "date") {
+      const typed = draft.trim();
+      const parsed = typed ? parseDate(typed) : null;
+      if (parsed) {
+        // What was typed is read back as a real date, so "next friday" is
+        // confirmed as a weekday and a number before it is accepted.
+        rows = [
+          {
+            id: format(parsed, API_DATE),
+            label: describeDate(parsed),
+            description: `From “${typed}”`,
+            icon: CalendarCheck,
+          },
+        ];
+      } else if (typed) {
+        // Unreadable: offer nothing, so Enter falls through to validation and
+        // explains itself rather than quietly picking a shortcut.
+        return [];
+      } else {
+        rows = dateShortcuts().map((shortcut) => ({
+          id: shortcut.value,
+          label: shortcut.label,
+          description: shortcut.description,
+        }));
+      }
     } else {
       return null; // free-text steps have no list
     }
@@ -316,6 +348,13 @@ export function AssistantWidget() {
       advance(currentArg.key, "", "");
       return;
     }
+    // Dates are recorded as the full date whichever row was picked, so the
+    // review line never says the vaguer "Tomorrow".
+    if (currentArg.kind === "date") {
+      const date = parseDate(item.id);
+      advance(currentArg.key, item.id, date ? describeDate(date) : item.label);
+      return;
+    }
     advance(currentArg.key, item.id, item.label);
   };
 
@@ -326,6 +365,13 @@ export function AssistantWidget() {
     if (error) {
       setFlow({ ...flow, error });
       return;
+    }
+    if (currentArg.kind === "date") {
+      const date = parseDate(value);
+      if (date) {
+        advance(currentArg.key, format(date, API_DATE), describeDate(date));
+        return;
+      }
     }
     advance(currentArg.key, value, value);
   };
@@ -344,7 +390,7 @@ export function AssistantWidget() {
     ]);
 
     try {
-      const result = await command.run(values, runners);
+      const result = await command.run(values, runners, labels);
       setFlow(null);
       say(result, "ok");
     } catch (error) {
@@ -644,9 +690,19 @@ export function AssistantWidget() {
               activeIndex={activeIndex}
               onHover={setActiveIndex}
               onSelect={selectItem}
-              title={query !== null ? "Actions" : undefined}
+              title={
+                query !== null
+                  ? "Actions"
+                  : currentArg?.kind === "date"
+                    ? "Pick a date, or type one"
+                    : undefined
+              }
               emptyLabel={
-                query !== null ? "No matching action" : "Nothing to choose from yet"
+                query !== null
+                  ? "No matching action"
+                  : currentArg?.kind === "date"
+                    ? "That isn't a date I can read yet — keep typing"
+                    : "Nothing to choose from yet"
               }
             />
           ) : null}
@@ -656,7 +712,12 @@ export function AssistantWidget() {
               <Textarea
                 ref={inputRef}
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  // The complaint is about what was there a moment ago; keeping
+                  // it on screen while the user fixes it just adds noise.
+                  if (flow?.error) setFlow({ ...flow, error: undefined });
+                }}
                 onKeyDown={onKeyDown}
                 rows={1}
                 placeholder={placeholder}

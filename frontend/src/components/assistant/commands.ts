@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  CalendarClock,
   FolderPlus,
   ListPlus,
   Pencil,
@@ -19,6 +20,7 @@ import {
   type TaskStatus,
   type WorkspaceRole,
 } from "@/lib/types";
+import { parseDate } from "./dates";
 
 /**
  * How a single argument is collected.
@@ -27,7 +29,8 @@ import {
  * from the live workspace, so the user picks real records instead of typing an
  * id they cannot know.
  */
-export type ArgKind = "text" | "email" | "choice" | "member" | "task" | "confirm";
+export type ArgKind =
+  "text" | "email" | "choice" | "member" | "task" | "date" | "confirm";
 
 export interface ArgOption {
   value: string;
@@ -63,7 +66,12 @@ export interface AssistantCommand {
   args: CommandArg[];
   /** One line describing exactly what will happen, shown before running. */
   review: (values: Record<string, string>, labels: Record<string, string>) => string;
-  run: (values: Record<string, string>, deps: CommandRunners) => Promise<string>;
+  run: (
+    values: Record<string, string>,
+    deps: CommandRunners,
+    /** The human-readable form of each value, for the confirmation message. */
+    labels: Record<string, string>,
+  ) => Promise<string>;
 }
 
 /** The mutations a command may perform, injected by the widget. */
@@ -72,6 +80,7 @@ export interface CommandRunners {
     title: string;
     status?: TaskStatus;
     priority?: Priority;
+    dueDate?: string;
     memberIds?: string[];
   }) => Promise<{ id: string; title: string }>;
   updateTask: (
@@ -80,6 +89,7 @@ export interface CommandRunners {
       title?: string;
       status?: TaskStatus;
       priority?: Priority;
+      dueDate?: string | null;
       memberIds?: string[];
     },
   ) => Promise<{ title: string }>;
@@ -125,6 +135,19 @@ const confirmArg = (prompt: string): CommandArg => ({
 const requiredText = (value: string): string | null =>
   value.trim().length === 0 ? "This can't be empty." : null;
 
+/** Reused wherever a task's due date is collected. */
+const dueDateArg = (prompt: string): CommandArg => ({
+  key: "dueDate",
+  label: "Due",
+  prompt,
+  placeholder: "e.g. tomorrow, next friday, 25 Aug",
+  kind: "date",
+  validate: (value) =>
+    parseDate(value)
+      ? null
+      : "I couldn't read that date. Try “tomorrow”, “next friday” or 2026-09-01.",
+});
+
 const validEmail = (value: string): string | null =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
     ? null
@@ -169,6 +192,11 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
         skipLabel: "No priority",
       },
       {
+        ...dueDateArg("When is it due?"),
+        optional: true,
+        skipLabel: "No due date",
+      },
+      {
         key: "assignee",
         label: "Assignee",
         prompt: "Who should own it?",
@@ -181,15 +209,50 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     review: (v, l) =>
       `Create “${v.title}” in ${l.status ?? "To Do"}${
         v.priority ? `, priority ${l.priority}` : ""
-      }${v.assignee ? `, assigned to ${l.assignee}` : ""}.`,
+      }${v.dueDate ? `, due ${l.dueDate}` : ""}${
+        v.assignee ? `, assigned to ${l.assignee}` : ""
+      }.`,
     run: async (v, deps) => {
       const task = await deps.createTask({
         title: v.title,
         status: (v.status as TaskStatus) || undefined,
         priority: (v.priority as Priority) || undefined,
+        dueDate: v.dueDate || undefined,
         memberIds: v.assignee ? [v.assignee] : undefined,
       });
       return `Created “${task.title}”.`;
+    },
+  },
+  {
+    id: "set-due-date",
+    label: "Set due date",
+    hint: "Give a task a deadline, or clear it",
+    icon: CalendarClock,
+    group: "Tasks",
+    keywords: ["due", "deadline", "date", "when", "schedule"],
+    args: [
+      {
+        key: "task",
+        label: "Task",
+        prompt: "Which task?",
+        placeholder: "Search your tasks",
+        kind: "task",
+      },
+      {
+        ...dueDateArg("When is it due?"),
+        optional: true,
+        skipLabel: "Clear the due date",
+      },
+    ],
+    review: (v, l) =>
+      v.dueDate
+        ? `Set “${l.task}” to be due ${l.dueDate}.`
+        : `Clear the due date on “${l.task}”.`,
+    run: async (v, deps, l) => {
+      const task = await deps.updateTask(v.task, { dueDate: v.dueDate || null });
+      return v.dueDate
+        ? `“${task.title}” is due ${l.dueDate}.`
+        : `Cleared the due date on “${task.title}”.`;
     },
   },
   {
