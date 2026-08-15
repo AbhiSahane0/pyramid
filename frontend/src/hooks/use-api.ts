@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useWorkspace } from "@/components/providers/workspace-context";
 import {
   api,
   type CreateTaskInput,
@@ -23,6 +24,31 @@ export const queryKeys = {
   workspaceMembers: ["workspace-members"] as const,
   workspaceInvitations: ["workspace-invitations"] as const,
 };
+
+/**
+ * Anything the API answers per workspace is cached per workspace and fetched
+ * only once one is known.
+ *
+ * Both halves matter. The gate stops the first paint from asking before the
+ * workspace list has arrived — that request carried no scope, and the server
+ * used to answer it with a guess, which is how an invited member saw an empty
+ * board until something forced a refetch. The key keeps two workspaces from
+ * sharing a cache entry, so switching can never show the previous one's cards.
+ */
+function useWorkspaceQuery<T>(
+  key: readonly unknown[],
+  queryFn: () => Promise<T>,
+  options: { staleTime?: number; enabled?: boolean } = {},
+) {
+  const { activeWorkspace } = useWorkspace();
+  const workspaceId = activeWorkspace?.id;
+  return useQuery({
+    queryKey: [...key, workspaceId] as const,
+    queryFn,
+    staleTime: options.staleTime,
+    enabled: Boolean(workspaceId) && options.enabled !== false,
+  });
+}
 
 // --- Auth / users ---
 
@@ -52,9 +78,7 @@ export function useLogout() {
 }
 
 export function useMembers() {
-  return useQuery({
-    queryKey: queryKeys.members,
-    queryFn: api.users.members,
+  return useWorkspaceQuery(queryKeys.members, api.users.members, {
     staleTime: 300_000,
   });
 }
@@ -101,9 +125,7 @@ export function useLeaveWorkspace() {
 // --- Labels ---
 
 export function useLabels() {
-  return useQuery({
-    queryKey: queryKeys.labels,
-    queryFn: api.labels.list,
+  return useWorkspaceQuery(queryKeys.labels, api.labels.list, {
     staleTime: 300_000,
   });
 }
@@ -111,14 +133,11 @@ export function useLabels() {
 // --- Tasks ---
 
 export function useTasks(filters: TaskFilters = {}) {
-  return useQuery({
-    queryKey: queryKeys.tasks(filters),
-    queryFn: () => api.tasks.list(filters),
-  });
+  return useWorkspaceQuery(queryKeys.tasks(filters), () => api.tasks.list(filters));
 }
 
 export function useTask(id: string) {
-  return useQuery({ queryKey: queryKeys.task(id), queryFn: () => api.tasks.get(id) });
+  return useWorkspaceQuery(queryKeys.task(id), () => api.tasks.get(id));
 }
 
 function invalidateTasks(
@@ -148,7 +167,7 @@ export function useUpdateTask() {
     mutationFn: ({ id, input }: { id: string; input: UpdateTaskInput }) =>
       api.tasks.update(id, input),
     onSuccess: (task) => {
-      queryClient.setQueryData(queryKeys.task(task.id), task);
+      invalidateTasks(queryClient, task.id);
       invalidateTasks(queryClient, task.parentId ?? undefined);
     },
     onError: (error) => toast.error(error.message),
@@ -248,7 +267,7 @@ export function useDeleteResource(taskId: string) {
 // --- Projects ---
 
 export function useProjects() {
-  return useQuery({ queryKey: queryKeys.projects, queryFn: api.projects.list });
+  return useWorkspaceQuery(queryKeys.projects, api.projects.list);
 }
 
 export function useCreateProject() {
@@ -286,19 +305,16 @@ export function useDeleteProject() {
 // --- Workspaces ---
 
 export function useWorkspaceMembers() {
-  return useQuery({
-    queryKey: queryKeys.workspaceMembers,
-    queryFn: api.workspaces.members,
-  });
+  return useWorkspaceQuery(queryKeys.workspaceMembers, api.workspaces.members);
 }
 
 export function useWorkspaceInvitations(enabled: boolean) {
-  return useQuery({
-    queryKey: queryKeys.workspaceInvitations,
-    queryFn: api.workspaces.invitations,
+  return useWorkspaceQuery(
+    queryKeys.workspaceInvitations,
+    api.workspaces.invitations,
     // Only admins may list invitations; asking as a member would 403.
-    enabled,
-  });
+    { enabled },
+  );
 }
 
 export function useCreateWorkspace() {

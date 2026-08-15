@@ -1,35 +1,12 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { WorkspaceContext } from "@/components/providers/workspace-context";
 import { useMe } from "@/hooks/use-api";
 import { api, setActiveWorkspaceId } from "@/lib/api";
-import type { Workspace } from "@/lib/types";
 
 const STORAGE_KEY = "pyramid-active-workspace";
-
-interface WorkspaceContextValue {
-  workspaces: Workspace[];
-  activeWorkspace: Workspace | null;
-  /** True until the workspace list has loaded — gate data fetching on this. */
-  isLoading: boolean;
-  switchWorkspace: (id: string) => void;
-}
-
-const WorkspaceContext = createContext<WorkspaceContextValue>({
-  workspaces: [],
-  activeWorkspace: null,
-  isLoading: true,
-  switchWorkspace: () => undefined,
-});
 
 function readStoredId(): string | null {
   if (typeof window === "undefined") return null;
@@ -49,7 +26,6 @@ function readStoredId(): string | null {
  * 404. When the stored id is stale we silently fall back to the first one.
  */
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
   const [requestedId, setRequestedId] = useState<string | null>(readStoredId);
 
   // Gated on the session: asking while signed out 401s, and that failure would
@@ -81,20 +57,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [activeId]);
 
-  const switchWorkspace = useCallback(
-    (id: string) => {
-      setRequestedId(id);
-      setActiveWorkspaceId(id);
-      // Everything on screen belongs to the previous workspace.
-      queryClient.removeQueries({ queryKey: ["tasks"] });
-      queryClient.removeQueries({ queryKey: ["task"] });
-      queryClient.removeQueries({ queryKey: ["projects"] });
-      queryClient.removeQueries({ queryKey: ["members"] });
-      queryClient.removeQueries({ queryKey: ["workspace-members"] });
-      queryClient.removeQueries({ queryKey: ["workspace-invitations"] });
-    },
-    [queryClient],
-  );
+  // No cache eviction needed: every workspace-scoped query is keyed by the
+  // workspace id, so the new one simply reads a different entry and switching
+  // back is instant instead of a refetch.
+  const switchWorkspace = useCallback((id: string) => {
+    setRequestedId(id);
+    setActiveWorkspaceId(id);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -109,6 +78,4 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
-export function useWorkspace(): WorkspaceContextValue {
-  return useContext(WorkspaceContext);
-}
+export { useWorkspace } from "@/components/providers/workspace-context";

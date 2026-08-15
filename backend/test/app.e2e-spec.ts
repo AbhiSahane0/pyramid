@@ -281,6 +281,57 @@ describe('Pyramid API (e2e)', () => {
     await authed(agent().post(`/api/invitations/${token}/accept`)).expect(403);
   });
 
+  it('refuses to guess the workspace for someone who belongs to several', async () => {
+    // Reproduces what an invited member saw: their own sign-up workspace is
+    // their oldest membership, so guessing served them an empty board instead
+    // of the team they had just joined.
+    const stamp = Date.now();
+    const member = await authService.loginWithGoogle({
+      googleId: `e2e-multi-${stamp}`,
+      email: `e2e-multi-${stamp}@example.com`,
+      name: 'Multi Workspace',
+      avatarUrl: null,
+    });
+
+    try {
+      const invite = await authed(
+        agent()
+          .post('/api/workspaces/current/invitations')
+          .set('x-workspace-id', workspaceId)
+          .send({ email: member.email }),
+      ).expect(201);
+      const token = (invite.body.inviteUrl as string).split('/').pop()!;
+
+      const { accessToken } = await authService.issueTokens(member);
+      const asMember = (req: request.Test) =>
+        req.set('Cookie', [`access_token=${accessToken}`]);
+
+      await asMember(agent().post(`/api/invitations/${token}/accept`)).expect(
+        200,
+      );
+
+      // Two memberships now, so an unscoped request is genuinely ambiguous —
+      // answering it with either workspace would be a guess.
+      await asMember(agent().get('/api/tasks')).expect(400);
+
+      // Named explicitly, they see the workspace they joined.
+      const tasks = await asMember(
+        agent().get('/api/tasks').set('x-workspace-id', workspaceId),
+      ).expect(200);
+      expect(tasks.body.length).toBeGreaterThan(0);
+
+      // Reading the board is a member's right; managing people is not.
+      await asMember(
+        agent()
+          .post('/api/workspaces/current/invitations')
+          .set('x-workspace-id', workspaceId)
+          .send({ email: 'nope@example.com' }),
+      ).expect(403);
+    } finally {
+      await prisma.user.delete({ where: { id: member.id } });
+    }
+  });
+
   it('rejects an expired invitation', async () => {
     const invite = await authed(
       agent()
