@@ -1,4 +1,5 @@
 import { Priority, TaskStatus } from '@prisma/client';
+import { buildAvatarUrl } from '../common/avatar';
 
 /**
  * Demo content mirroring the Figma design. Seeded once globally (members,
@@ -6,8 +7,8 @@ import { Priority, TaskStatus } from '@prisma/client';
  * immediately looks like the design.
  */
 
-const avatar = (seed: string): string =>
-  `https://api.dicebear.com/9.x/adventurer/png?seed=${encodeURIComponent(seed)}&size=96&backgroundColor=c0aede,b6e3f4,ffd5dc,d1d4f9`;
+/** The design's personas are all one style; real accounts get a varied one. */
+const avatar = (seed: string): string => buildAvatarUrl('adventurer', seed);
 
 export interface DemoMember {
   key: string;

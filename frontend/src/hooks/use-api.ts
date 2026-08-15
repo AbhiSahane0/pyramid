@@ -17,6 +17,7 @@ export const queryKeys = {
   task: (id: string) => ["task", id] as const,
   projects: ["projects"] as const,
   members: ["members"] as const,
+  avatarOptions: ["avatar-options"] as const,
   labels: ["labels"] as const,
   workspaces: ["workspaces"] as const,
   workspaceMembers: ["workspace-members"] as const,
@@ -58,12 +59,25 @@ export function useMembers() {
   });
 }
 
+export function useAvatarOptions(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.avatarOptions,
+    queryFn: api.users.avatarOptions,
+    // Derived from the account, so it never changes within a session.
+    staleTime: Infinity,
+    enabled,
+  });
+}
+
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.users.updateMe,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      // The user's own face appears on every card they're assigned to.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Profile updated");
     },
     onError: (error) => toast.error(error.message),

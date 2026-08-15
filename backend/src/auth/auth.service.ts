@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { User } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import type { CookieOptions, Response } from 'express';
+import { defaultAvatarUrl } from '../common/avatar';
 import { resolveFrontendUrl } from '../common/frontend-url';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkspaceSeedService } from '../seed/workspace-seed.service';
@@ -33,7 +34,15 @@ export class AuthService {
     if (existingByGoogleId) {
       return this.prisma.user.update({
         where: { id: existingByGoogleId.id },
-        data: { name: profile.name, avatarUrl: profile.avatarUrl },
+        data: {
+          name: profile.name,
+          // Only fill a gap. Overwriting on every login would silently undo a
+          // picture the user chose in Settings.
+          avatarUrl:
+            existingByGoogleId.avatarUrl ??
+            profile.avatarUrl ??
+            defaultAvatarUrl(profile.email),
+        },
       });
     }
 
@@ -47,7 +56,10 @@ export class AuthService {
         data: {
           googleId: profile.googleId,
           name: profile.name,
-          avatarUrl: profile.avatarUrl ?? existingByEmail.avatarUrl,
+          avatarUrl:
+            existingByEmail.avatarUrl ??
+            profile.avatarUrl ??
+            defaultAvatarUrl(profile.email),
         },
       });
     }
@@ -60,7 +72,7 @@ export class AuthService {
         googleId: profile.googleId,
         email: profile.email,
         name: profile.name,
-        avatarUrl: profile.avatarUrl,
+        avatarUrl: profile.avatarUrl ?? defaultAvatarUrl(profile.email),
         username: profile.email.split('@')[0],
       },
     });
@@ -76,6 +88,7 @@ export class AuthService {
         email: `guest-${id}@guest.local`,
         name: 'Guest',
         username: `guest-${id}`,
+        avatarUrl: defaultAvatarUrl(`guest-${id}`),
         isGuest: true,
       },
     });

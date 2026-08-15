@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AvatarPickerDialog } from "@/components/avatar-picker-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ export default function ProfileSettingsPage() {
   const leaveWorkspace = useLeaveWorkspace();
   const [confirmingSave, setConfirmingSave] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [pickingAvatar, setPickingAvatar] = useState(false);
 
   const form = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -107,11 +109,21 @@ export default function ProfileSettingsPage() {
         <Form {...form}>
           <form onSubmit={onSubmit} className="rounded-xl border bg-card">
             <SettingRow label="Profile picture">
-              <UserAvatar
-                name={user.name}
-                avatarUrl={user.avatarUrl}
-                className="size-10"
-              />
+              <span className="flex items-center gap-3">
+                <UserAvatar
+                  name={user.name}
+                  avatarUrl={user.avatarUrl}
+                  className="size-10"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPickingAvatar(true)}
+                >
+                  Change
+                </Button>
+              </span>
             </SettingRow>
 
             <SettingRow label="Email">
@@ -244,6 +256,13 @@ export default function ProfileSettingsPage() {
         pendingLabel="Saving…"
         pending={updateProfile.isPending}
         onConfirm={submitProfile}
+      />
+
+      <AvatarPickerDialog
+        open={pickingAvatar}
+        onOpenChange={setPickingAvatar}
+        name={user.name}
+        currentAvatarUrl={user.avatarUrl}
       />
     </div>
   );

@@ -178,8 +178,13 @@ export const api = {
   },
   users: {
     members: () => request<User[]>("/users/members"),
-    updateMe: (input: { name?: string; title?: string; username?: string }) =>
-      request<User>("/users/me", { method: "PATCH", body: input }),
+    avatarOptions: () => request<{ options: string[] }>("/users/me/avatars"),
+    updateMe: (input: {
+      name?: string;
+      title?: string;
+      username?: string;
+      avatarUrl?: string;
+    }) => request<User>("/users/me", { method: "PATCH", body: input }),
     leaveWorkspace: () =>
       request<{ success: boolean }>("/users/me", { method: "DELETE" }),
   },
