@@ -284,7 +284,16 @@ export default function ProjectsPage() {
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(undefined)}
         title="Delete this project?"
-        description={`“${deleting?.name ?? ""}” and all of its tasks will be permanently removed.`}
+        // Naming the number is the difference between a warning people read
+        // and one they click through: "and all of its tasks" hides how much
+        // is about to go.
+        description={
+          deleting?._count.tasks
+            ? `“${deleting.name}” and its ${deleting._count.tasks} ${
+                deleting._count.tasks === 1 ? "task" : "tasks"
+              } will be permanently deleted. This cannot be undone — move any task you want to keep to another project first.`
+            : `“${deleting?.name ?? ""}” will be permanently deleted. It has no tasks.`
+        }
         confirmLabel="Delete"
         pendingLabel="Deleting…"
         destructive
