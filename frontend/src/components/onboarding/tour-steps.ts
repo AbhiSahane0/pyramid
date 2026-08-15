@@ -69,7 +69,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: "assistant",
     title: "Ask the assistant",
     description:
-      "Your workspace assistant lives here. Ask what's overdue, what a teammate is on, or what to pick up next — it's a preview for now, and answers arrive once it's connected.",
+      "Your workspace assistant lives here. Type @ to run an action — create a task, assign it, change its priority, invite a teammate — and it walks you through one question at a time.",
     placement: "top",
   },
   {
