@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import { HelpMenu } from "@/components/help-menu";
 import { TopbarBreadcrumb } from "@/components/topbar-breadcrumb";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
       </SidebarInset>
+      <AssistantWidget />
       <OnboardingTour />
     </SidebarProvider>
   );

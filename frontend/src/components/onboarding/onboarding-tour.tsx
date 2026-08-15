@@ -267,8 +267,12 @@ export function OnboardingTour() {
 
       <div
         ref={measureCard}
-        className="absolute w-[330px] max-w-[calc(100vw-24px)] rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg"
-        style={position}
+        className="absolute w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg"
+        // The height cap is a backstop: placement is computed from a measured
+        // size, and a step whose copy grew since the last measurement would
+        // otherwise be able to overflow the viewport before the observer
+        // catches up.
+        style={{ ...position, maxHeight: "calc(100svh - 24px)" }}
       >
         <div className="mb-2 flex items-start gap-2.5">
           <Logo className="size-7 rounded-md" />
