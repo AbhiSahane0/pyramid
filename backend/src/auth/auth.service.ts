@@ -76,7 +76,7 @@ export class AuthService {
         username: profile.email.split('@')[0],
       },
     });
-    await this.workspaceSeed.createPersonalWorkspace(user.id, user.name, false);
+    await this.workspaceSeed.createPersonalWorkspace(user.id, false);
     return user;
   }
 
@@ -92,7 +92,7 @@ export class AuthService {
         isGuest: true,
       },
     });
-    await this.workspaceSeed.createPersonalWorkspace(user.id, user.name, true);
+    await this.workspaceSeed.createPersonalWorkspace(user.id, true);
     return user;
   }
 

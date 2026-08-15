@@ -54,8 +54,13 @@ export class WorkspaceSeedService {
   }
 
   /**
-   * Every account needs somewhere to work, so sign-up creates a personal
-   * workspace with the new user as its OWNER.
+   * Every account needs somewhere to work, so sign-up creates a workspace with
+   * the new user as its OWNER.
+   *
+   * It is deliberately not named after its creator: a workspace is a team, and
+   * naming it "Dexter's Workspace" makes it read as personal property right up
+   * until the moment someone else is invited into it. "Untitled" invites the
+   * rename that Settings already supports.
    *
    * Guests get the demo content (they exist to show the app off); real accounts
    * start empty and meet the app's own empty states instead of someone else's
@@ -63,12 +68,11 @@ export class WorkspaceSeedService {
    */
   async createPersonalWorkspace(
     userId: string,
-    displayName: string,
     withDemoContent: boolean,
   ): Promise<string> {
     const workspace = await this.prisma.workspace.create({
       data: {
-        name: `${displayName}'s Workspace`,
+        name: 'Untitled Workspace',
         members: { create: { userId, role: WorkspaceRole.OWNER } },
       },
     });
