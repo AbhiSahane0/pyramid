@@ -8,6 +8,8 @@ import {
   isBoardPath,
   paramsWithFilters,
   paramsWithoutFilters,
+  searchFromParams,
+  SEARCH_KEY,
   TaskFilterContext,
   type BoardFilters,
 } from "@/components/providers/task-filter-context";
@@ -65,9 +67,21 @@ export function TaskFilterProvider({ children }: { children: ReactNode }) {
     [searchParams, write],
   );
 
+  const search = onBoard ? searchFromParams(searchParams) : "";
+
+  const setSearch = useCallback(
+    (term: string) => {
+      const next = new URLSearchParams(onBoard ? searchParams : undefined);
+      if (term.trim()) next.set(SEARCH_KEY, term);
+      else next.delete(SEARCH_KEY);
+      write(next);
+    },
+    [onBoard, searchParams, write],
+  );
+
   const value = useMemo(
-    () => ({ filters, patchFilters, clearFilters }),
-    [filters, patchFilters, clearFilters],
+    () => ({ filters, patchFilters, clearFilters, search, setSearch }),
+    [filters, patchFilters, clearFilters, search, setSearch],
   );
 
   return (

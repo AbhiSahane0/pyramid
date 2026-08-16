@@ -17,6 +17,9 @@ export function isBoardPath(pathname: string): boolean {
 /** The query keys the board owns. Anything else in the URL is left alone. */
 const FILTER_KEYS = ["columnId", "priority", "memberId", "labelId"] as const;
 
+/** Search rides in the URL too, under a short key people can read and edit. */
+export const SEARCH_KEY = "q";
+
 /**
  * Reads filters out of a query string.
  *
@@ -64,11 +67,18 @@ export function paramsWithoutFilters(current: URLSearchParams): URLSearchParams 
   return next;
 }
 
+export function searchFromParams(params: URLSearchParams): string {
+  return params.get(SEARCH_KEY) ?? "";
+}
+
 export interface TaskFilterContextValue {
   filters: BoardFilters;
   /** Merges — setting a column filter must not drop a priority filter. */
   patchFilters: (patch: BoardFilters) => void;
   clearFilters: () => void;
+  /** The committed search term. The input keeps its own instant copy. */
+  search: string;
+  setSearch: (term: string) => void;
 }
 
 /**
@@ -81,6 +91,8 @@ export const TaskFilterContext = createContext<TaskFilterContextValue>({
   filters: {},
   patchFilters: () => undefined,
   clearFilters: () => undefined,
+  search: "",
+  setSearch: () => undefined,
 });
 
 export function useTaskFilters(): TaskFilterContextValue {

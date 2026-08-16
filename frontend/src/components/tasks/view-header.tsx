@@ -77,7 +77,12 @@ export function ViewHeader({
   onSearchChange,
   onAddTask,
 }: ViewHeaderProps) {
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [openedByUser, setOpenedByUser] = useState(false);
+  // A board reached by link can already be searching, and a collapsed box
+  // would leave someone looking at a narrowed board with no visible reason
+  // for it — so a term opens the box on its own. Clearing the text does not
+  // close it, because the box is only dismissed deliberately.
+  const searchOpen = openedByUser || Boolean(search);
   const searchRef = useRef<HTMLInputElement>(null);
   const { data: members = [] } = useMembers();
   const { data: labels = [] } = useLabels();
@@ -88,7 +93,7 @@ export function ViewHeader({
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
         event.preventDefault();
-        setSearchOpen(true);
+        setOpenedByUser(true);
         requestAnimationFrame(() => searchRef.current?.focus());
       }
     };
@@ -102,7 +107,7 @@ export function ViewHeader({
 
   const closeSearch = () => {
     onSearchChange("");
-    setSearchOpen(false);
+    setOpenedByUser(false);
   };
 
   return (
@@ -119,7 +124,12 @@ export function ViewHeader({
             ref={searchRef}
             autoFocus
             value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
+            onChange={(event) => {
+              // Emptying the field is editing, not dismissing — hold the box
+              // open so the caret does not vanish mid-correction.
+              setOpenedByUser(true);
+              onSearchChange(event.target.value);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Escape") closeSearch();
             }}
@@ -134,6 +144,9 @@ export function ViewHeader({
                 aria-label="Clear search"
                 className="cursor-pointer text-muted-foreground hover:text-foreground"
                 onClick={() => {
+                  // Empties the field but keeps it open — it hands focus back,
+                  // so the next thing expected is a new term, not a closed box.
+                  setOpenedByUser(true);
                   onSearchChange("");
                   searchRef.current?.focus();
                 }}
@@ -164,7 +177,7 @@ export function ViewHeader({
                 aria-label="Search tasks"
                 className="size-9"
                 data-tour="search"
-                onClick={() => setSearchOpen(true)}
+                onClick={() => setOpenedByUser(true)}
               >
                 <Search className="size-4" aria-hidden />
               </Button>

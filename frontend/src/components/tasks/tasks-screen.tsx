@@ -11,7 +11,7 @@ import {
   useReorderColumns,
   useTasks,
 } from "@/hooks/use-api";
-import { useDebounced } from "@/hooks/use-debounced";
+import { useDebouncedCallback } from "@/hooks/use-debounced";
 import { useViewPrefs } from "@/hooks/use-view-prefs";
 import { ApiError } from "@/lib/api";
 import type { BoardColumn, TaskFilters } from "@/lib/types";
@@ -75,15 +75,26 @@ export function TasksScreen({
   const [managingColumn, setManagingColumn] = useState<BoardColumn | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
   // Held above this screen so the assistant can drive the same filters.
-  const { filters, patchFilters, clearFilters } = useTaskFilters();
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounced(search);
+  const { filters, patchFilters, clearFilters, search, setSearch } = useTaskFilters();
+
+  // The input needs to echo every keystroke; the URL should not. `typed` is
+  // the instant copy and the committed term follows a beat later — but only
+  // while the two agree on where they started, so pressing Back or opening a
+  // shared link replaces what is in the box instead of fighting it.
+  const [typed, setTyped] = useState({ committed: search, value: search });
+  const searchDraft = typed.committed === search ? typed.value : search;
+  const commitSearch = useDebouncedCallback(setSearch);
+  const onSearchChange = (value: string) => {
+    setTyped({ committed: search, value });
+    commitSearch(value);
+  };
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogColumnId, setDialogColumnId] = useState<string | undefined>(undefined);
 
   const activeFilters: TaskFilters = {
     ...filters,
-    search: debouncedSearch || undefined,
+    search: search || undefined,
     projectId,
   };
   const { data: tasks, isPending, isError, error, refetch } = useTasks(activeFilters);
@@ -93,9 +104,7 @@ export function TasksScreen({
     setDialogOpen(true);
   };
 
-  const hasActiveCriteria = Boolean(
-    debouncedSearch || Object.values(filters).some(Boolean),
-  );
+  const hasActiveCriteria = Boolean(search || Object.values(filters).some(Boolean));
 
   const renderBody = () => {
     if (isPending || !hydrated) {
@@ -135,6 +144,7 @@ export function TasksScreen({
             <Button
               variant="outline"
               onClick={() => {
+                setTyped({ committed: "", value: "" });
                 clearFilters();
                 setSearch("");
               }}
@@ -198,8 +208,8 @@ export function TasksScreen({
           filters={filters}
           onFiltersChange={patchFilters}
           onClearFilters={clearFilters}
-          search={search}
-          onSearchChange={setSearch}
+          search={searchDraft}
+          onSearchChange={onSearchChange}
           onAddTask={() => openAddTask()}
         />
       </div>
