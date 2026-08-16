@@ -13,7 +13,8 @@ import type {
   Task,
   TaskDetail,
   TaskFilters,
-  TaskStatus,
+  BoardColumn,
+  BoardColor,
   User,
 } from "./types";
 
@@ -73,8 +74,10 @@ export function getActiveWorkspaceId(): string | null {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  // Omitted on purpose when unset: the API falls back to the caller's first
-  // workspace, so the very first load works before one has been chosen.
+  // Workspace-scoped queries wait for this to be set (see useWorkspaceQuery),
+  // so in practice it is always present. The server only infers a workspace
+  // for callers who belong to exactly one, and 400s otherwise rather than
+  // guessing.
   if (activeWorkspaceId) headers["x-workspace-id"] = activeWorkspaceId;
 
   const response = await fetch(`/api${path}`, {
@@ -136,7 +139,7 @@ function query(params: Record<string, string | undefined>): string {
 export interface CreateTaskInput {
   title: string;
   description?: string;
-  status?: TaskStatus;
+  columnId?: string;
   priority?: Priority;
   startDate?: string;
   dueDate?: string;
@@ -150,7 +153,7 @@ export interface CreateTaskInput {
 export interface UpdateTaskInput {
   title?: string;
   description?: string | null;
-  status?: TaskStatus;
+  columnId?: string;
   priority?: Priority;
   startDate?: string | null;
   dueDate?: string | null;
@@ -196,7 +199,7 @@ export const api = {
       request<TaskDetail>("/tasks", { method: "POST", body: input }),
     update: (id: string, input: UpdateTaskInput) =>
       request<TaskDetail>(`/tasks/${id}`, { method: "PATCH", body: input }),
-    move: (id: string, input: { status: TaskStatus; position: number }) =>
+    move: (id: string, input: { columnId: string; position: number }) =>
       request<Task>(`/tasks/${id}/move`, { method: "PATCH", body: input }),
     delete: (id: string) => request<void>(`/tasks/${id}`, { method: "DELETE" }),
     addComment: (taskId: string, input: { body: string; parentId?: string }) =>
@@ -219,6 +222,22 @@ export const api = {
   },
   labels: {
     list: () => request<Label[]>("/labels"),
+  },
+  columns: {
+    list: () => request<BoardColumn[]>("/columns"),
+    create: (input: { name: string; color?: BoardColor }) =>
+      request<BoardColumn>("/columns", { method: "POST", body: input }),
+    update: (id: string, input: { name?: string; color?: BoardColor }) =>
+      request<BoardColumn>(`/columns/${id}`, { method: "PATCH", body: input }),
+    reorder: (columnIds: string[]) =>
+      request<BoardColumn[]>("/columns/order", {
+        method: "PATCH",
+        body: { columnIds },
+      }),
+    remove: (id: string, moveTasksTo?: string) =>
+      request<void>(`/columns/${id}${query({ moveTasksTo })}`, {
+        method: "DELETE",
+      }),
   },
   workspaces: {
     list: () => request<Workspace[]>("/workspaces"),

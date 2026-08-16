@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Priority, TaskStatus } from '@prisma/client';
+import { Priority } from '@prisma/client';
 import {
   IsArray,
   IsDateString,
@@ -21,10 +21,12 @@ export class CreateTaskDto {
   @Length(0, 5000)
   description?: string;
 
-  @ApiPropertyOptional({ enum: TaskStatus, default: TaskStatus.TODO })
+  @ApiPropertyOptional({
+    description: 'Board column. Defaults to the leftmost one.',
+  })
   @IsOptional()
-  @IsEnum(TaskStatus)
-  status?: TaskStatus;
+  @IsString()
+  columnId?: string;
 
   @ApiPropertyOptional({ enum: Priority, default: Priority.NO_PRIORITY })
   @IsOptional()

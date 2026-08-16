@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, WorkspaceRole } from '@prisma/client';
+import { DEFAULT_COLUMNS, POSITION_STEP } from '../columns/board-colors';
 import { PrismaService } from '../prisma/prisma.service';
 import { toPublicUser, type PublicUser } from '../users/user.mapper';
 
@@ -54,6 +55,14 @@ export class WorkspacesService {
       data: {
         name,
         members: { create: { userId, role: WorkspaceRole.OWNER } },
+        // A board with no columns has nowhere to put a task, so the shipped
+        // five come with it. They are ordinary rows from here on.
+        columns: {
+          create: DEFAULT_COLUMNS.map((column, index) => ({
+            ...column,
+            position: (index + 1) * POSITION_STEP,
+          })),
+        },
       },
       include: { _count: { select: { members: true } } },
     });
@@ -174,21 +183,6 @@ export class WorkspacesService {
   /** Deletes the workspace and, by cascade, its projects, tasks and invites. */
   async remove(workspaceId: string): Promise<void> {
     await this.prisma.workspace.delete({ where: { id: workspaceId } });
-  }
-
-  /** Ensures every account has somewhere to work — used right after sign-up. */
-  async ensurePersonalWorkspace(
-    userId: string,
-    displayName: string,
-  ): Promise<string> {
-    const existing = await this.prisma.membership.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-    });
-    if (existing) return existing.workspaceId;
-
-    const created = await this.create(userId, `${displayName}'s Workspace`);
-    return created.id;
   }
 
   private async requireMembership(workspaceId: string, userId: string) {

@@ -1,4 +1,4 @@
-import { Priority, TaskStatus } from '@prisma/client';
+import { Priority } from '@prisma/client';
 import { buildAvatarUrl } from '../common/avatar';
 
 /**
@@ -109,7 +109,8 @@ interface DemoSubtask {
 export interface DemoTask {
   title: string;
   description?: string;
-  status: TaskStatus;
+  /** Column name in the default board (see DEFAULT_COLUMNS). */
+  column: string;
   priority: Priority;
   dueDate?: string;
   memberKeys: string[];
@@ -152,7 +153,7 @@ export const DEMO_TASKS: DemoTask[] = [
     title: 'Write API Documentation',
     description:
       'Create clear and detailed API documentation to guide developers in using the inventory and sales metrics features effectively.',
-    status: TaskStatus.TODO,
+    column: 'To Do',
     priority: Priority.HIGH,
     dueDate: '2026-07-29',
     memberKeys: ['admin'],
@@ -181,7 +182,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Implement Search Function',
-    status: TaskStatus.TODO,
+    column: 'To Do',
     priority: Priority.MEDIUM,
     dueDate: '2026-07-29',
     memberKeys: ['admin'],
@@ -190,7 +191,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Deploy to Production',
-    status: TaskStatus.TODO,
+    column: 'To Do',
     priority: Priority.URGENT,
     dueDate: '2026-07-29',
     memberKeys: ['admin'],
@@ -199,7 +200,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Code Review Completed',
-    status: TaskStatus.DOING,
+    column: 'Doing',
     priority: Priority.MEDIUM,
     dueDate: '2026-07-29',
     memberKeys: ['admin'],
@@ -208,7 +209,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Design Mockups Finalized',
-    status: TaskStatus.DOING,
+    column: 'Doing',
     priority: Priority.HIGH,
     dueDate: '2026-07-29',
     memberKeys: ['admin'],
@@ -217,7 +218,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Feature Testing Passed',
-    status: TaskStatus.COMPLETED,
+    column: 'Completed',
     priority: Priority.MEDIUM,
     dueDate: '2026-07-30',
     memberKeys: ['qa'],
@@ -226,7 +227,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'UI Design Updated',
-    status: TaskStatus.COMPLETED,
+    column: 'Completed',
     priority: Priority.LOW,
     dueDate: '2026-07-31',
     memberKeys: ['designer'],
@@ -235,7 +236,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Security Audit Scheduled',
-    status: TaskStatus.COMPLETED,
+    column: 'Completed',
     priority: Priority.HIGH,
     dueDate: '2026-08-01',
     memberKeys: ['security'],
@@ -244,7 +245,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'UI Review Session',
-    status: TaskStatus.ON_HOLD,
+    column: 'On Hold',
     priority: Priority.MEDIUM,
     memberKeys: ['designer'],
     labels: ['Review', 'Design'],
@@ -252,7 +253,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Backend Refactor',
-    status: TaskStatus.ON_HOLD,
+    column: 'On Hold',
     priority: Priority.HIGH,
     memberKeys: ['devteam'],
     labels: ['Development'],
@@ -260,7 +261,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'User Feedback Analysis',
-    status: TaskStatus.ON_HOLD,
+    column: 'On Hold',
     priority: Priority.LOW,
     memberKeys: ['product'],
     labels: ['Research'],
@@ -268,7 +269,7 @@ export const DEMO_TASKS: DemoTask[] = [
   },
   {
     title: 'Performance Optimization',
-    status: TaskStatus.ON_HOLD,
+    column: 'On Hold',
     priority: Priority.MEDIUM,
     memberKeys: ['engineering'],
     labels: ['Optimization'],

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Label, User, WorkspaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { DEFAULT_COLUMNS, POSITION_STEP } from '../columns/board-colors';
 import {
   DEMO_LABELS,
   DEMO_MEMBERS,
@@ -74,6 +75,15 @@ export class WorkspaceSeedService {
       data: {
         name: 'Untitled Workspace',
         members: { create: { userId, role: WorkspaceRole.OWNER } },
+        // Every board needs somewhere to put a task, so the shipped five come
+        // with the workspace. They are ordinary rows — rename, recolour,
+        // reorder or replace them.
+        columns: {
+          create: DEFAULT_COLUMNS.map((column, index) => ({
+            ...column,
+            position: (index + 1) * POSITION_STEP,
+          })),
+        },
       },
     });
 
@@ -94,6 +104,16 @@ export class WorkspaceSeedService {
    */
   async seedForWorkspace(workspaceId: string, actorId: string): Promise<void> {
     const { members, labels } = await this.seedGlobals();
+
+    const columns = await this.prisma.boardColumn.findMany({
+      where: { workspaceId },
+      select: { id: true, name: true, position: true },
+      orderBy: { position: 'asc' },
+    });
+    const columnByName = new Map(columns.map((c) => [c.name, c.id]));
+    const fallbackColumnId = columns[0].id;
+    const columnFor = (name: string) =>
+      columnByName.get(name) ?? fallbackColumnId;
 
     const projectByName = new Map<string, string>();
     for (const p of DEMO_PROJECTS) {
@@ -117,7 +137,7 @@ export class WorkspaceSeedService {
         data: {
           title: t.title,
           description: t.description,
-          status: t.status,
+          columnId: columnFor(t.column),
           priority: t.priority,
           dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
           position,
@@ -148,7 +168,7 @@ export class WorkspaceSeedService {
         await this.prisma.task.create({
           data: {
             title: s.title,
-            status: task.status,
+            columnId: task.columnId,
             priority: s.priority,
             dueDate: new Date(s.dueDate),
             position: subPosition,

@@ -4,12 +4,18 @@ import { ListChecks, Plus, RotateCcw, SearchX, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTasks } from "@/hooks/use-api";
+import {
+  useCanManageColumns,
+  useColumns,
+  useReorderColumns,
+  useTasks,
+} from "@/hooks/use-api";
 import { useDebounced } from "@/hooks/use-debounced";
 import { useViewPrefs } from "@/hooks/use-view-prefs";
 import { ApiError } from "@/lib/api";
-import type { TaskFilters, TaskStatus } from "@/lib/types";
+import type { BoardColumn, TaskFilters } from "@/lib/types";
 import { BoardView } from "./board-view";
+import { ColumnFormDialog } from "./column-form-dialog";
 import { EmptyState } from "./empty-state";
 import { ListView } from "./list-view";
 import { TaskFormDialog } from "./task-form-dialog";
@@ -60,20 +66,18 @@ export function TasksScreen({
   projectId,
   storageKey,
 }: TasksScreenProps) {
-  const {
-    prefs,
-    hydrated,
-    setMode,
-    toggleField,
-    setColumnOrder,
-    toggleColumnCollapsed,
-    resetLayout,
-  } = useViewPrefs(storageKey);
+  const { prefs, hydrated, setMode, toggleField, toggleColumnCollapsed, resetLayout } =
+    useViewPrefs(storageKey);
+  const { data: columns = [] } = useColumns();
+  const canManageColumns = useCanManageColumns();
+  const reorderColumns = useReorderColumns();
+  const [managingColumn, setManagingColumn] = useState<BoardColumn | null>(null);
+  const [addingColumn, setAddingColumn] = useState(false);
   const [filters, setFilters] = useState<TaskFilters>({});
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounced(search);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogStatus, setDialogStatus] = useState<TaskStatus>("TODO");
+  const [dialogColumnId, setDialogColumnId] = useState<string | undefined>(undefined);
 
   const activeFilters: TaskFilters = {
     ...filters,
@@ -82,8 +86,8 @@ export function TasksScreen({
   };
   const { data: tasks, isPending, isError, error, refetch } = useTasks(activeFilters);
 
-  const openAddTask = (status: TaskStatus = "TODO") => {
-    setDialogStatus(status);
+  const openAddTask = (columnId?: string) => {
+    setDialogColumnId(columnId);
     setDialogOpen(true);
   };
 
@@ -157,16 +161,24 @@ export function TasksScreen({
     }
 
     return prefs.mode === "list" ? (
-      <ListView tasks={tasks ?? []} fields={prefs.fields} onAddTask={openAddTask} />
+      <ListView
+        tasks={tasks ?? []}
+        columns={columns}
+        fields={prefs.fields}
+        onAddTask={openAddTask}
+      />
     ) : (
       <BoardView
         tasks={tasks ?? []}
+        columns={columns}
         fields={prefs.fields}
-        columnOrder={prefs.columnOrder}
         collapsedColumns={prefs.collapsedColumns}
+        canReorder={canManageColumns}
         onAddTask={openAddTask}
-        onColumnOrderChange={setColumnOrder}
+        onColumnOrderChange={(columnIds) => reorderColumns.mutate(columnIds)}
         onToggleCollapsed={toggleColumnCollapsed}
+        onManageColumn={canManageColumns ? setManagingColumn : undefined}
+        onAddColumn={canManageColumns ? () => setAddingColumn(true) : undefined}
       />
     );
   };
@@ -194,8 +206,19 @@ export function TasksScreen({
       <TaskFormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        defaultStatus={dialogStatus}
+        defaultColumnId={dialogColumnId}
         projectId={projectId}
+      />
+
+      <ColumnFormDialog
+        open={addingColumn || Boolean(managingColumn)}
+        onOpenChange={(next) => {
+          if (next) return;
+          setAddingColumn(false);
+          setManagingColumn(null);
+        }}
+        column={managingColumn}
+        columns={columns}
       />
     </div>
   );

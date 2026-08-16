@@ -3,7 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Priority, Task, TaskStatus } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
+import { Prisma, Priority, Task } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateResourceDto } from './dto/create-resource.dto';
@@ -17,6 +18,7 @@ const memberSelect = {
 } as const;
 
 const listInclude = {
+  column: { select: { id: true, name: true, color: true, position: true } },
   members: memberSelect,
   labels: true,
   reporter: memberSelect,
@@ -65,14 +67,6 @@ const PRIORITY_LABELS: Record<Priority, string> = {
   LOW: 'Low',
 };
 
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  BACKLOG: 'Backlog',
-  TODO: 'To Do',
-  DOING: 'Doing',
-  COMPLETED: 'Completed',
-  ON_HOLD: 'On Hold',
-};
-
 @Injectable()
 export class TasksService {
   constructor(private readonly prisma: PrismaService) {}
@@ -81,7 +75,7 @@ export class TasksService {
     const where: Prisma.TaskWhereInput = {
       workspaceId,
       parentId: null,
-      status: query.status,
+      columnId: query.columnId,
       priority: query.priority,
       projectId: query.projectId,
       reporterId: query.reporterId,
@@ -97,7 +91,7 @@ export class TasksService {
     return this.prisma.task.findMany({
       where,
       include: listInclude,
-      orderBy: [{ status: 'asc' }, { position: 'asc' }],
+      orderBy: [{ column: { position: 'asc' } }, { position: 'asc' }],
     });
   }
 
@@ -117,16 +111,18 @@ export class TasksService {
     actorId: string,
     dto: CreateTaskDto,
   ): Promise<TaskDetail> {
-    const status = dto.status ?? TaskStatus.TODO;
+    const columnId = dto.columnId
+      ? await this.requireColumn(workspaceId, dto.columnId)
+      : await this.firstColumn(workspaceId);
     const task = await this.prisma.task.create({
       data: {
         title: dto.title,
         description: dto.description,
-        status,
+        columnId,
         priority: dto.priority ?? Priority.NO_PRIORITY,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-        position: await this.nextPosition(workspaceId, status, dto.parentId),
+        position: await this.nextPosition(workspaceId, columnId, dto.parentId),
         workspaceId,
         createdById: actorId,
         projectId: dto.projectId,
@@ -155,7 +151,7 @@ export class TasksService {
     const data: Prisma.TaskUpdateInput = {
       title: dto.title,
       description: dto.description,
-      status: dto.status,
+      column: dto.columnId ? { connect: { id: dto.columnId } } : undefined,
       priority: dto.priority,
       startDate:
         dto.startDate === undefined
@@ -189,11 +185,12 @@ export class TasksService {
         : undefined,
     };
 
-    // Status changed outside drag & drop: append to the end of the new column.
-    if (dto.status && dto.status !== existing.status) {
+    // Column changed outside drag & drop: append to the end of the new one.
+    if (dto.columnId && dto.columnId !== existing.columnId) {
+      await this.requireColumn(workspaceId, dto.columnId);
       data.position = await this.nextPosition(
         workspaceId,
-        dto.status,
+        dto.columnId,
         existing.parentId,
       );
     }
@@ -216,20 +213,18 @@ export class TasksService {
     dto: MoveTaskDto,
   ): Promise<Task> {
     const existing = await this.requireInWorkspace(workspaceId, id);
+    await this.requireColumn(workspaceId, dto.columnId);
     const task = await this.prisma.task.update({
       where: { id },
-      data: { status: dto.status, position: dto.position },
+      data: { columnId: dto.columnId, position: dto.position },
     });
-    if (existing.status !== dto.status) {
+    if (existing.columnId !== dto.columnId) {
       await this.prisma.activity.create({
         data: {
           taskId: id,
           actorId,
           type: 'status_changed',
-          meta: {
-            from: STATUS_LABELS[existing.status],
-            to: STATUS_LABELS[dto.status],
-          },
+          meta: await this.columnChangeMeta(existing.columnId, dto.columnId),
         },
       });
     }
@@ -332,14 +327,62 @@ export class TasksService {
     return task;
   }
 
+  /**
+   * Proves a column belongs to this workspace before a task is pointed at it.
+   * Without this a task could be parked in another team's column — the foreign
+   * key alone only checks that the column exists.
+   */
+  private async requireColumn(
+    workspaceId: string,
+    columnId: string,
+  ): Promise<string> {
+    const column = await this.prisma.boardColumn.findFirst({
+      where: { id: columnId, workspaceId },
+      select: { id: true },
+    });
+    if (!column) {
+      throw new NotFoundException('Column not found');
+    }
+    return column.id;
+  }
+
+  /** The leftmost column — where a task lands when none is named. */
+  private async firstColumn(workspaceId: string): Promise<string> {
+    const column = await this.prisma.boardColumn.findFirst({
+      where: { workspaceId },
+      orderBy: { position: 'asc' },
+      select: { id: true },
+    });
+    if (!column) {
+      throw new BadRequestException(
+        'This workspace has no columns — add one before creating tasks',
+      );
+    }
+    return column.id;
+  }
+
+  /** Column names for the activity feed, read at the time of the change. */
+  private async columnChangeMeta(
+    fromId: string,
+    toId: string,
+  ): Promise<{ from: string; to: string }> {
+    const columns = await this.prisma.boardColumn.findMany({
+      where: { id: { in: [fromId, toId] } },
+      select: { id: true, name: true },
+    });
+    const nameOf = (id: string) =>
+      columns.find((column) => column.id === id)?.name ?? 'Unknown';
+    return { from: nameOf(fromId), to: nameOf(toId) };
+  }
+
   /** Next position at the end of a column (or subtask list). */
   private async nextPosition(
     workspaceId: string,
-    status: TaskStatus,
+    columnId: string,
     parentId?: string | null,
   ): Promise<number> {
     const last = await this.prisma.task.findFirst({
-      where: { workspaceId, status, parentId: parentId ?? null },
+      where: { workspaceId, columnId, parentId: parentId ?? null },
       orderBy: { position: 'desc' },
       select: { position: true },
     });
@@ -352,15 +395,12 @@ export class TasksService {
     actorId: string,
   ): Promise<void> {
     const entries: Prisma.ActivityCreateManyInput[] = [];
-    if (dto.status && dto.status !== existing.status) {
+    if (dto.columnId && dto.columnId !== existing.columnId) {
       entries.push({
         taskId: existing.id,
         actorId,
         type: 'status_changed',
-        meta: {
-          from: STATUS_LABELS[existing.status],
-          to: STATUS_LABELS[dto.status],
-        },
+        meta: await this.columnChangeMeta(existing.columnId, dto.columnId),
       });
     }
     if (dto.priority && dto.priority !== existing.priority) {

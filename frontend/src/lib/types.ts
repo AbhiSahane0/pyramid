@@ -2,7 +2,26 @@
  * API types mirroring the NestJS/Prisma backend (dates arrive as ISO strings).
  */
 
-export type TaskStatus = "BACKLOG" | "TODO" | "DOING" | "COMPLETED" | "ON_HOLD";
+/** Palette keys a column may use; the client owns how each one renders. */
+export type BoardColor =
+  "slate" | "blue" | "emerald" | "amber" | "orange" | "red" | "violet" | "pink" | "teal";
+
+/** A column on the board. Workspaces define their own. */
+export interface BoardColumn {
+  id: string;
+  name: string;
+  color: BoardColor;
+  position: number;
+  _count: { tasks: number };
+}
+
+/** The slice of a column embedded in each task. */
+export interface TaskColumn {
+  id: string;
+  name: string;
+  color: BoardColor;
+  position: number;
+}
 
 export type Priority = "NO_PRIORITY" | "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
@@ -46,7 +65,8 @@ export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: TaskStatus;
+  columnId: string;
+  column: TaskColumn;
   priority: Priority;
   startDate: string | null;
   dueDate: string | null;
@@ -102,7 +122,7 @@ export interface TaskDetail extends Task {
 
 export interface TaskFilters {
   search?: string;
-  status?: TaskStatus;
+  columnId?: string;
   priority?: Priority;
   projectId?: string;
   memberId?: string;
@@ -112,15 +132,28 @@ export interface TaskFilters {
 
 // --- Display metadata shared across the UI ---
 
-export const STATUS_ORDER: TaskStatus[] = ["TODO", "DOING", "COMPLETED", "ON_HOLD"];
-
-export const STATUS_META: Record<TaskStatus, { label: string; dotClass: string }> = {
-  BACKLOG: { label: "Backlog", dotClass: "bg-amber-500" },
-  TODO: { label: "To Do", dotClass: "bg-slate-400" },
-  DOING: { label: "Doing", dotClass: "bg-blue-500" },
-  COMPLETED: { label: "Completed", dotClass: "bg-emerald-500" },
-  ON_HOLD: { label: "On Hold", dotClass: "bg-orange-400" },
+/**
+ * How each palette key renders. Kept here rather than in the database so the
+ * board stays readable in both themes and can be restyled without a migration.
+ */
+export const BOARD_COLOR_META: Record<BoardColor, { label: string; dotClass: string }> = {
+  slate: { label: "Slate", dotClass: "bg-slate-400" },
+  blue: { label: "Blue", dotClass: "bg-blue-500" },
+  emerald: { label: "Emerald", dotClass: "bg-emerald-500" },
+  amber: { label: "Amber", dotClass: "bg-amber-500" },
+  orange: { label: "Orange", dotClass: "bg-orange-400" },
+  red: { label: "Red", dotClass: "bg-red-500" },
+  violet: { label: "Violet", dotClass: "bg-violet-500" },
+  pink: { label: "Pink", dotClass: "bg-pink-500" },
+  teal: { label: "Teal", dotClass: "bg-teal-500" },
 };
+
+export const BOARD_COLORS = Object.keys(BOARD_COLOR_META) as BoardColor[];
+
+/** Unknown colours (an older client, a hand-edited row) still get a dot. */
+export function columnDotClass(color: string): string {
+  return BOARD_COLOR_META[color as BoardColor]?.dotClass ?? "bg-slate-400";
+}
 
 export const PRIORITY_ORDER: Priority[] = [
   "NO_PRIORITY",

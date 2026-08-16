@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ViewPrefs } from "@/hooks/use-view-prefs";
-import { STATUS_META, STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
+import { columnDotClass, type BoardColumn, type Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LabelBadge } from "./label-badge";
 import { MemberAvatars } from "./member-avatars";
@@ -27,12 +27,13 @@ import { TaskActionsMenu } from "./task-actions-menu";
 
 interface ListViewProps {
   tasks: Task[];
+  columns: BoardColumn[];
   fields: ViewPrefs["fields"];
-  onAddTask: (status: TaskStatus) => void;
+  onAddTask: (columnId: string) => void;
 }
 
-/** Grouped-by-status tables matching the design's list layout. */
-export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
+/** Grouped-by-column tables matching the design's list layout. */
+export function ListView({ tasks, columns, fields, onAddTask }: ListViewProps) {
   const router = useRouter();
 
   const visibleColumns = [
@@ -44,29 +45,31 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
     fields.reporter,
   ].filter(Boolean).length;
 
-  const groups = STATUS_ORDER.map((status) => ({
-    status,
-    tasks: tasks
-      .filter((task) => task.status === status)
-      .sort((a, b) => a.position - b.position),
-  })).filter((group) => group.tasks.length > 0);
+  const groups = columns
+    .map((column) => ({
+      column,
+      tasks: tasks
+        .filter((task) => task.columnId === column.id)
+        .sort((a, b) => a.position - b.position),
+    }))
+    .filter((group) => group.tasks.length > 0);
 
   if (groups.length === 0) return null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-8 sm:px-6">
-      {groups.map(({ status, tasks: groupTasks }) => (
-        <Collapsible key={status} defaultOpen>
+      {groups.map(({ column, tasks: groupTasks }) => (
+        <Collapsible key={column.id} defaultOpen>
           <CollapsibleTrigger className="group mb-2 flex items-center gap-1.5 text-sm font-semibold">
             <ChevronDown
               className="size-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90"
               aria-hidden
             />
             <span
-              className={cn("size-2 rounded-full", STATUS_META[status].dotClass)}
+              className={cn("size-2 rounded-full", columnDotClass(column.color))}
               aria-hidden
             />
-            {STATUS_META[status].label}
+            {column.name}
             <span className="font-normal text-muted-foreground tabular-nums">
               {groupTasks.length}
             </span>
@@ -168,8 +171,8 @@ export function ListView({ tasks, fields, onAddTask }: ListViewProps) {
                       {fields.status ? (
                         <TableCell>
                           <span className="flex items-center gap-1.5 text-sm">
-                            <StatusDot status={task.status} />
-                            {STATUS_META[task.status].label}
+                            <StatusDot color={task.column.color} />
+                            {task.column.name}
                           </span>
                         </TableCell>
                       ) : null}

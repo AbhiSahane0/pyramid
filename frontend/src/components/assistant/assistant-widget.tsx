@@ -16,6 +16,7 @@ import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  useColumns,
   useCreateProject,
   useCreateTask,
   useDeleteTask,
@@ -28,7 +29,6 @@ import {
 } from "@/hooks/use-api";
 import { useMounted } from "@/hooks/use-mounted";
 import { ApiError } from "@/lib/api";
-import { STATUS_META } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   availableCommands,
@@ -113,6 +113,7 @@ export function AssistantWidget() {
   const { activeWorkspace } = useWorkspace();
   const { data: members = [] } = useWorkspaceMembers();
   const { data: tasks = [] } = useTasks();
+  const { data: columns = [] } = useColumns();
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -199,7 +200,17 @@ export function AssistantWidget() {
         .map((task) => ({
           id: task.id,
           label: task.title,
-          description: STATUS_META[task.status].label,
+          description: task.column.name,
+        }));
+    } else if (currentArg.kind === "column") {
+      rows = columns
+        .filter((column) => matches(column.name))
+        .map((column) => ({
+          id: column.id,
+          label: column.name,
+          description: `${column._count.tasks} ${
+            column._count.tasks === 1 ? "task" : "tasks"
+          }`,
         }));
     } else if (currentArg.kind === "date") {
       const typed = draft.trim();
@@ -237,7 +248,7 @@ export function AssistantWidget() {
       ];
     }
     return rows;
-  }, [query, commands, currentArg, draft, members, tasks]);
+  }, [query, commands, currentArg, draft, members, tasks, columns]);
 
   // The highlight belongs to one particular list. Storing the list it was
   // chosen for — rather than resetting it from an effect — means a new list

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { STATUS_ORDER, type TaskStatus } from "@/lib/types";
 
 export type ViewMode = "list" | "board";
 
@@ -11,10 +10,12 @@ export type TaskField =
 export interface ViewPrefs {
   mode: ViewMode;
   fields: Record<TaskField, boolean>;
-  /** Board column order (drag the column handle to rearrange). */
-  columnOrder: TaskStatus[];
-  /** Columns collapsed to a narrow strip. */
-  collapsedColumns: TaskStatus[];
+  /**
+   * Columns collapsed to a narrow strip, by column id. Personal, unlike the
+   * order — collapsing a column is how one person clears their view, not a
+   * change to the team's board.
+   */
+  collapsedColumns: string[];
 }
 
 const DEFAULT_PREFS: ViewPrefs = {
@@ -27,20 +28,8 @@ const DEFAULT_PREFS: ViewPrefs = {
     status: false,
     reporter: false,
   },
-  columnOrder: STATUS_ORDER,
   collapsedColumns: [],
 };
-
-/** Drops unknown/duplicate statuses and appends any column missing from storage. */
-function normalizeColumnOrder(stored: unknown): TaskStatus[] {
-  if (!Array.isArray(stored)) return STATUS_ORDER;
-  const valid = stored.filter(
-    (status, index): status is TaskStatus =>
-      STATUS_ORDER.includes(status as TaskStatus) && stored.indexOf(status) === index,
-  );
-  const missing = STATUS_ORDER.filter((status) => !valid.includes(status));
-  return [...valid, ...missing];
-}
 
 /** View mode, visible fields and board layout — persisted per surface. */
 export function useViewPrefs(storageKey: string) {
@@ -59,11 +48,8 @@ export function useViewPrefs(storageKey: string) {
         setPrefs({
           mode: parsed.mode === "list" ? "list" : "board",
           fields: { ...DEFAULT_PREFS.fields, ...parsed.fields },
-          columnOrder: normalizeColumnOrder(parsed.columnOrder),
           collapsedColumns: Array.isArray(parsed.collapsedColumns)
-            ? parsed.collapsedColumns.filter((status): status is TaskStatus =>
-                STATUS_ORDER.includes(status as TaskStatus),
-              )
+            ? parsed.collapsedColumns.filter((id): id is string => typeof id === "string")
             : [],
         });
       }
@@ -100,33 +86,24 @@ export function useViewPrefs(storageKey: string) {
     [update],
   );
 
-  const setColumnOrder = useCallback(
-    (columnOrder: TaskStatus[]) => update({ columnOrder }),
-    [update],
-  );
-
   const toggleColumnCollapsed = useCallback(
-    (status: TaskStatus) =>
+    (columnId: string) =>
       update((current) => ({
         ...current,
-        collapsedColumns: current.collapsedColumns.includes(status)
-          ? current.collapsedColumns.filter((s) => s !== status)
-          : [...current.collapsedColumns, status],
+        collapsedColumns: current.collapsedColumns.includes(columnId)
+          ? current.collapsedColumns.filter((id) => id !== columnId)
+          : [...current.collapsedColumns, columnId],
       })),
     [update],
   );
 
-  const resetLayout = useCallback(
-    () => update({ columnOrder: STATUS_ORDER, collapsedColumns: [] }),
-    [update],
-  );
+  const resetLayout = useCallback(() => update({ collapsedColumns: [] }), [update]);
 
   return {
     prefs,
     hydrated,
     setMode,
     toggleField,
-    setColumnOrder,
     toggleColumnCollapsed,
     resetLayout,
   };

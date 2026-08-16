@@ -11,7 +11,7 @@ import {
   type ProjectInput,
   type UpdateTaskInput,
 } from "@/lib/api";
-import type { Task, TaskFilters, TaskStatus, WorkspaceRole } from "@/lib/types";
+import type { BoardColor, Task, TaskFilters, WorkspaceRole } from "@/lib/types";
 
 export const queryKeys = {
   me: ["me"] as const,
@@ -21,6 +21,7 @@ export const queryKeys = {
   members: ["members"] as const,
   avatarOptions: ["avatar-options"] as const,
   labels: ["labels"] as const,
+  columns: ["columns"] as const,
   workspaces: ["workspaces"] as const,
   workspaceMembers: ["workspace-members"] as const,
   workspaceInvitations: ["workspace-invitations"] as const,
@@ -131,6 +132,61 @@ export function useLabels() {
   });
 }
 
+// --- Board columns ---
+
+export function useColumns() {
+  return useWorkspaceQuery(queryKeys.columns, api.columns.list, {
+    staleTime: 60_000,
+  });
+}
+
+/** Columns change the board for everyone, so mutating them is admin-only. */
+export function useCanManageColumns(): boolean {
+  const { activeWorkspace } = useWorkspace();
+  return activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
+}
+
+function useColumnMutation<TInput, TResult>(
+  mutationFn: (input: TInput) => Promise<TResult>,
+  successMessage?: (result: TResult) => string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.columns });
+      // Cards carry their column's name and colour, so both have to refresh.
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["task"] });
+      if (successMessage) toast.success(successMessage(result));
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useCreateColumn() {
+  return useColumnMutation(api.columns.create, (column) => `Added “${column.name}”`);
+}
+
+export function useUpdateColumn() {
+  return useColumnMutation(
+    ({ id, input }: { id: string; input: { name?: string; color?: BoardColor } }) =>
+      api.columns.update(id, input),
+  );
+}
+
+export function useReorderColumns() {
+  return useColumnMutation((columnIds: string[]) => api.columns.reorder(columnIds));
+}
+
+export function useDeleteColumn() {
+  return useColumnMutation(
+    ({ id, moveTasksTo }: { id: string; moveTasksTo?: string }) =>
+      api.columns.remove(id, moveTasksTo),
+    () => "Column deleted",
+  );
+}
+
 // --- Tasks ---
 
 export function useTasks(filters: TaskFilters = {}) {
@@ -196,19 +252,19 @@ export function useMoveTask() {
   return useMutation({
     mutationFn: ({
       id,
-      status,
+      columnId,
       position,
     }: {
       id: string;
-      status: TaskStatus;
+      columnId: string;
       position: number;
-    }) => api.tasks.move(id, { status, position }),
-    onMutate: async ({ id, status, position }) => {
+    }) => api.tasks.move(id, { columnId, position }),
+    onMutate: async ({ id, columnId, position }) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
       const previous = queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] });
       queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (tasks) =>
         tasks
-          ?.map((task) => (task.id === id ? { ...task, status, position } : task))
+          ?.map((task) => (task.id === id ? { ...task, columnId, position } : task))
           .sort((a, b) => a.position - b.position),
       );
       return { previous };

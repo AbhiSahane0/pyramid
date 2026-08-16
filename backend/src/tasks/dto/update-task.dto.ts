@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Priority, TaskStatus } from '@prisma/client';
+import { Priority } from '@prisma/client';
 import {
   IsArray,
   IsDateString,
@@ -28,10 +28,10 @@ export class UpdateTaskDto {
   @Length(0, 5000)
   description?: string | null;
 
-  @ApiPropertyOptional({ enum: TaskStatus })
+  @ApiPropertyOptional({ description: 'Move the task to this board column' })
   @IsOptional()
-  @IsEnum(TaskStatus)
-  status?: TaskStatus;
+  @IsString()
+  columnId?: string;
 
   @ApiPropertyOptional({ enum: Priority })
   @IsOptional()

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Priority, TaskStatus } from '@prisma/client';
+import { Priority } from '@prisma/client';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class TaskQueryDto {
@@ -10,10 +10,10 @@ export class TaskQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ enum: TaskStatus })
+  @ApiPropertyOptional({ description: 'Only tasks in this board column' })
   @IsOptional()
-  @IsEnum(TaskStatus)
-  status?: TaskStatus;
+  @IsString()
+  columnId?: string;
 
   @ApiPropertyOptional({ enum: Priority })
   @IsOptional()

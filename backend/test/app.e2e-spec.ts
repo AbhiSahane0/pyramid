@@ -169,14 +169,21 @@ describe('Pyramid API (e2e)', () => {
   });
 
   it('creates, updates, moves and deletes a task', async () => {
+    const columns = await authed(agent().get('/api/columns')).expect(200);
+    const todo = columns.body.find((c: { name: string }) => c.name === 'To Do');
+    const doing = columns.body.find(
+      (c: { name: string }) => c.name === 'Doing',
+    );
+
     const created = await authed(
       agent().post('/api/tasks').send({
         title: 'E2E smoke task',
         priority: 'MEDIUM',
-        status: 'TODO',
+        columnId: todo.id,
       }),
     ).expect(201);
     createdTaskId = created.body.id;
+    expect(created.body.column.name).toBe('To Do');
 
     const updated = await authed(
       agent().patch(`/api/tasks/${createdTaskId}`).send({ priority: 'URGENT' }),
@@ -191,7 +198,7 @@ describe('Pyramid API (e2e)', () => {
     await authed(
       agent()
         .patch(`/api/tasks/${createdTaskId}/move`)
-        .send({ status: 'DOING', position: 42 }),
+        .send({ columnId: doing.id, position: 42 }),
     ).expect(200);
 
     await authed(agent().delete(`/api/tasks/${createdTaskId}`)).expect(204);

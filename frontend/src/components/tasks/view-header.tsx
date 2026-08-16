@@ -34,15 +34,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useLabels, useMembers } from "@/hooks/use-api";
+import { useColumns, useLabels, useMembers } from "@/hooks/use-api";
 import type { TaskField, ViewMode, ViewPrefs } from "@/hooks/use-view-prefs";
-import {
-  PRIORITY_META,
-  PRIORITY_ORDER,
-  STATUS_META,
-  STATUS_ORDER,
-  type TaskFilters,
-} from "@/lib/types";
+import { PRIORITY_META, PRIORITY_ORDER, type TaskFilters } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const FIELD_OPTIONS: { key: TaskField; label: string }[] = [
@@ -83,6 +77,7 @@ export function ViewHeader({
   const searchRef = useRef<HTMLInputElement>(null);
   const { data: members = [] } = useMembers();
   const { data: labels = [] } = useLabels();
+  const { data: columns = [] } = useColumns();
 
   // ⌘F / Ctrl+F opens the task search, as hinted in the design's search bar.
   useEffect(() => {
@@ -285,31 +280,35 @@ export function ViewHeader({
               <DropdownMenuSubTrigger className="gap-2">
                 <span className="flex size-4 items-center justify-center">
                   <StatusDot
-                    status={filters.status ?? "TODO"}
-                    className={filters.status ? "" : "bg-muted-foreground/40"}
+                    color={
+                      columns.find((column) => column.id === filters.columnId)?.color ??
+                      "slate"
+                    }
+                    className={filters.columnId ? "" : "bg-muted-foreground/40"}
                   />
                 </span>
-                Status
+                Column
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="w-44 rounded-xl p-1.5">
                   <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                    Status
+                    Column
                   </DropdownMenuLabel>
-                  {STATUS_ORDER.map((status) => (
+                  {columns.map((column) => (
                     <DropdownMenuItem
-                      key={status}
+                      key={column.id}
                       className="gap-2"
                       onClick={() =>
                         setFilter({
-                          status: filters.status === status ? undefined : status,
+                          columnId:
+                            filters.columnId === column.id ? undefined : column.id,
                         })
                       }
                     >
-                      <StatusDot status={status} />
-                      {STATUS_META[status].label}
-                      {filters.status === status ? (
-                        <Check className="ml-auto size-4" aria-hidden />
+                      <StatusDot color={column.color} />
+                      <span className="truncate">{column.name}</span>
+                      {filters.columnId === column.id ? (
+                        <Check className="ml-auto size-4 shrink-0" aria-hidden />
                       ) : null}
                     </DropdownMenuItem>
                   ))}

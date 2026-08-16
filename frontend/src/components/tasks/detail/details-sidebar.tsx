@@ -34,8 +34,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/user-avatar";
-import { useMe, useMembers, useUpdateTask } from "@/hooks/use-api";
-import { PRIORITY_META, STATUS_META, type Activity, type TaskDetail } from "@/lib/types";
+import { useColumns, useMe, useMembers, useUpdateTask } from "@/hooks/use-api";
+import { PRIORITY_META, type Activity, type TaskDetail } from "@/lib/types";
 
 function activityText(activity: Activity): string {
   switch (activity.type) {
@@ -55,6 +55,7 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
   const updateTask = useUpdateTask();
   const { data: me } = useMe();
   const { data: members = [] } = useMembers();
+  const { data: columns = [] } = useColumns();
 
   const patch = (input: Parameters<typeof updateTask.mutate>[0]["input"]) => {
     updateTask.mutate({ id: task.id, input });
@@ -104,8 +105,9 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
               <dt className="w-24 shrink-0 text-muted-foreground">Status</dt>
               <dd>
                 <StatusPicker
-                  value={task.status}
-                  onChange={(status) => patch({ status })}
+                  value={task.columnId}
+                  onChange={(columnId) => patch({ columnId })}
+                  columns={columns}
                   align="start"
                   trigger={
                     <Button
@@ -113,8 +115,8 @@ export function DetailsSidebar({ task }: { task: TaskDetail }) {
                       size="sm"
                       className="h-7 gap-1.5 px-2 font-medium"
                     >
-                      <StatusDot status={task.status} />
-                      {STATUS_META[task.status].label}
+                      <StatusDot color={task.column.color} />
+                      {task.column.name}
                     </Button>
                   }
                 />

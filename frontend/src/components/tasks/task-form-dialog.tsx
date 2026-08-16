@@ -35,13 +35,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateTask, useUpdateTask } from "@/hooks/use-api";
-import { PRIORITY_META, STATUS_META, type Task, type TaskStatus } from "@/lib/types";
+import { useColumns, useCreateTask, useUpdateTask } from "@/hooks/use-api";
+import { PRIORITY_META, type Task } from "@/lib/types";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(300, "Keep it under 300 characters"),
   description: z.string().max(5000, "Keep it under 5000 characters").optional(),
-  status: z.enum(["BACKLOG", "TODO", "DOING", "COMPLETED", "ON_HOLD"]),
+  columnId: z.string().min(1, "Pick a column"),
   priority: z.enum(["NO_PRIORITY", "URGENT", "HIGH", "MEDIUM", "LOW"]),
   dueDate: z.string().nullable(),
   memberIds: z.array(z.string()),
@@ -56,7 +56,7 @@ interface TaskFormDialogProps {
   /** Existing task switches the dialog to edit mode. */
   task?: Task;
   /** Presets for creation (column "+", project view, subtasks). */
-  defaultStatus?: TaskStatus;
+  defaultColumnId?: string;
   projectId?: string;
   parentId?: string;
 }
@@ -65,20 +65,23 @@ export function TaskFormDialog({
   open,
   onOpenChange,
   task,
-  defaultStatus = "TODO",
+  defaultColumnId,
   projectId,
   parentId,
 }: TaskFormDialogProps) {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const { data: columns = [] } = useColumns();
   const isEdit = Boolean(task);
+  // Whatever the caller asked for, falling back to the leftmost column.
+  const fallbackColumnId = defaultColumnId ?? columns[0]?.id ?? "";
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: "",
       description: "",
-      status: defaultStatus,
+      columnId: fallbackColumnId,
       priority: "NO_PRIORITY",
       dueDate: null,
       memberIds: [],
@@ -94,7 +97,7 @@ export function TaskFormDialog({
         ? {
             title: task.title,
             description: task.description ?? "",
-            status: task.status,
+            columnId: task.columnId,
             priority: task.priority,
             dueDate: task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : null,
             memberIds: task.members.map((m) => m.id),
@@ -103,14 +106,14 @@ export function TaskFormDialog({
         : {
             title: "",
             description: "",
-            status: defaultStatus,
+            columnId: fallbackColumnId,
             priority: "NO_PRIORITY",
             dueDate: null,
             memberIds: [],
             labelIds: [],
           },
     );
-  }, [open, task, defaultStatus, form]);
+  }, [open, task, fallbackColumnId, form]);
 
   const submitting = createTask.isPending || updateTask.isPending;
   const [confirmingSave, setConfirmingSave] = useState(false);
@@ -121,7 +124,7 @@ export function TaskFormDialog({
     const payload = {
       title: values.title,
       description: values.description || undefined,
-      status: values.status,
+      columnId: values.columnId,
       priority: values.priority,
       dueDate: values.dueDate ?? undefined,
       memberIds: values.memberIds,
@@ -210,11 +213,12 @@ export function TaskFormDialog({
             <div className="flex flex-wrap gap-2">
               <FormField
                 control={form.control}
-                name="status"
+                name="columnId"
                 render={({ field }) => (
                   <StatusPicker
                     value={field.value}
                     onChange={field.onChange}
+                    columns={columns}
                     align="start"
                     trigger={
                       <Button
@@ -223,8 +227,14 @@ export function TaskFormDialog({
                         size="sm"
                         className="h-8 gap-1.5"
                       >
-                        <StatusDot status={field.value} />
-                        {STATUS_META[field.value].label}
+                        <StatusDot
+                          color={
+                            columns.find((column) => column.id === field.value)?.color ??
+                            "slate"
+                          }
+                        />
+                        {columns.find((column) => column.id === field.value)?.name ??
+                          "Column"}
                       </Button>
                     }
                   />

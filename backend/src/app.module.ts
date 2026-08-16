@@ -9,6 +9,7 @@ import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { SeedModule } from './seed/seed.module';
+import { ColumnsModule } from './columns/columns.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
@@ -28,6 +29,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     WorkspacesModule,
     ProjectsModule,
     TasksModule,
+    ColumnsModule,
     LabelsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

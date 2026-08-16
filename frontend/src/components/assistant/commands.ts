@@ -14,10 +14,7 @@ import {
 import {
   PRIORITY_META,
   PRIORITY_ORDER,
-  STATUS_META,
-  STATUS_ORDER,
   type Priority,
-  type TaskStatus,
   type WorkspaceRole,
 } from "@/lib/types";
 import { parseDate } from "./dates";
@@ -30,7 +27,7 @@ import { parseDate } from "./dates";
  * id they cannot know.
  */
 export type ArgKind =
-  "text" | "email" | "choice" | "member" | "task" | "date" | "confirm";
+  "text" | "email" | "choice" | "member" | "task" | "column" | "date" | "confirm";
 
 export interface ArgOption {
   value: string;
@@ -78,7 +75,7 @@ export interface AssistantCommand {
 export interface CommandRunners {
   createTask: (input: {
     title: string;
-    status?: TaskStatus;
+    columnId?: string;
     priority?: Priority;
     dueDate?: string;
     memberIds?: string[];
@@ -87,7 +84,7 @@ export interface CommandRunners {
     id: string,
     input: {
       title?: string;
-      status?: TaskStatus;
+      columnId?: string;
       priority?: Priority;
       dueDate?: string | null;
       memberIds?: string[];
@@ -104,11 +101,6 @@ export interface CommandRunners {
   removeMember: (userId: string) => Promise<void>;
   updateMemberRole: (userId: string, role: WorkspaceRole) => Promise<{ name: string }>;
 }
-
-const statusOptions: ArgOption[] = STATUS_ORDER.map((status) => ({
-  value: status,
-  label: STATUS_META[status].label,
-}));
 
 const priorityOptions: ArgOption[] = PRIORITY_ORDER.map((priority) => ({
   value: priority,
@@ -172,14 +164,13 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
         validate: requiredText,
       },
       {
-        key: "status",
+        key: "columnId",
         label: "Column",
         prompt: "Which column should it start in?",
         placeholder: "Pick a column",
-        kind: "choice",
-        options: statusOptions,
+        kind: "column",
         optional: true,
-        skipLabel: "Use To Do",
+        skipLabel: "Use the first column",
       },
       {
         key: "priority",
@@ -207,7 +198,7 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
       },
     ],
     review: (v, l) =>
-      `Create “${v.title}” in ${l.status ?? "To Do"}${
+      `Create “${v.title}”${l.columnId ? ` in ${l.columnId}` : ""}${
         v.priority ? `, priority ${l.priority}` : ""
       }${v.dueDate ? `, due ${l.dueDate}` : ""}${
         v.assignee ? `, assigned to ${l.assignee}` : ""
@@ -215,7 +206,7 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     run: async (v, deps) => {
       const task = await deps.createTask({
         title: v.title,
-        status: (v.status as TaskStatus) || undefined,
+        columnId: v.columnId || undefined,
         priority: (v.priority as Priority) || undefined,
         dueDate: v.dueDate || undefined,
         memberIds: v.assignee ? [v.assignee] : undefined,
@@ -300,17 +291,16 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
         kind: "task",
       },
       {
-        key: "status",
+        key: "columnId",
         label: "Column",
         prompt: "Move it to which column?",
         placeholder: "Pick a column",
-        kind: "choice",
-        options: statusOptions,
+        kind: "column",
       },
     ],
-    review: (_v, l) => `Move “${l.task}” to ${l.status}.`,
+    review: (_v, l) => `Move “${l.task}” to ${l.columnId}.`,
     run: async (v, deps) => {
-      const task = await deps.updateTask(v.task, { status: v.status as TaskStatus });
+      const task = await deps.updateTask(v.task, { columnId: v.columnId });
       return `Moved “${task.title}”.`;
     },
   },

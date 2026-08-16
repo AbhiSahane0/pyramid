@@ -28,6 +28,7 @@ import {
   GripVertical,
   MoreHorizontal,
   Plus,
+  Settings2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -41,38 +42,46 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMoveTask } from "@/hooks/use-api";
 import type { ViewPrefs } from "@/hooks/use-view-prefs";
-import { STATUS_META, STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
+import { columnDotClass, type BoardColumn, type Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { TaskCard } from "./task-card";
 
 interface BoardViewProps {
   tasks: Task[];
+  columns: BoardColumn[];
   fields: ViewPrefs["fields"];
-  columnOrder?: TaskStatus[];
-  collapsedColumns?: TaskStatus[];
-  onAddTask: (status: TaskStatus) => void;
-  onColumnOrderChange?: (order: TaskStatus[]) => void;
-  onToggleCollapsed?: (status: TaskStatus) => void;
+  collapsedColumns?: string[];
+  canReorder?: boolean;
+  onAddTask: (columnId: string) => void;
+  onColumnOrderChange?: (columnIds: string[]) => void;
+  onToggleCollapsed?: (columnId: string) => void;
+  onManageColumn?: (column: BoardColumn) => void;
+  onAddColumn?: () => void;
 }
 
 interface ColumnProps {
-  status: TaskStatus;
+  column: BoardColumn;
   tasks: Task[];
   fields: ViewPrefs["fields"];
   collapsed: boolean;
-  onAddTask: (status: TaskStatus) => void;
-  onToggleCollapsed?: (status: TaskStatus) => void;
+  canReorder: boolean;
+  onAddTask: (columnId: string) => void;
+  onToggleCollapsed?: (columnId: string) => void;
+  onManageColumn?: (column: BoardColumn) => void;
 }
 
-function BoardColumn({
-  status,
+function BoardColumnPanel({
+  column,
   tasks,
   fields,
   collapsed,
+  canReorder,
   onAddTask,
   onToggleCollapsed,
+  onManageColumn,
 }: ColumnProps) {
-  const meta = STATUS_META[status];
+  const meta = { label: column.name, dotClass: columnDotClass(column.color) };
+  const status = column.id;
   const {
     attributes,
     listeners,
@@ -80,14 +89,14 @@ function BoardColumn({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: status, data: { type: "column" } });
+  } = useSortable({ id: column.id, data: { type: "column" }, disabled: !canReorder });
   // Separate id from the sortable above: `useSortable` already registers a
-  // droppable under `status`, and registering a second one with the same id
-  // makes the two nodes fight over a single entry, so column drop targeting
+  // droppable under the column id, and registering a second one with the same
+  // id makes the two nodes fight over a single entry, so column drop targeting
   // (notably onto an empty column) becomes unreliable.
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: dropzoneId(status),
-    data: { type: "dropzone", status },
+    id: dropzoneId(column.id),
+    data: { type: "dropzone", status: column.id },
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -138,20 +147,22 @@ function BoardColumn({
       )}
     >
       <header className="flex shrink-0 items-center gap-1.5 px-3 py-2.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="cursor-grab rounded text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
-              aria-label={`Reorder ${meta.label} column`}
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical className="size-4" aria-hidden />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Drag to reorder column</TooltipContent>
-        </Tooltip>
+        {canReorder ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="cursor-grab rounded text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
+                aria-label={`Reorder ${meta.label} column`}
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical className="size-4" aria-hidden />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Drag to reorder column</TooltipContent>
+          </Tooltip>
+        ) : null}
         <span className={cn("size-2 rounded-full", meta.dotClass)} aria-hidden />
         <h2 className="truncate text-sm font-semibold">{meta.label}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{tasks.length}</span>
@@ -194,6 +205,12 @@ function BoardColumn({
               <ChevronsRightLeft className="size-4" aria-hidden />
               Collapse column
             </DropdownMenuItem>
+            {onManageColumn ? (
+              <DropdownMenuItem className="gap-2" onClick={() => onManageColumn(column)}>
+                <Settings2 className="size-4" aria-hidden />
+                Edit column
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
@@ -235,7 +252,7 @@ function BoardColumn({
 
 /** Droppable id for a column's card area, kept distinct from the column id. */
 const DROPZONE_PREFIX = "dropzone:";
-const dropzoneId = (status: TaskStatus): string => `${DROPZONE_PREFIX}${status}`;
+const dropzoneId = (columnId: string): string => `${DROPZONE_PREFIX}${columnId}`;
 
 /** Fractional position between the drop target's neighbors. */
 function positionBetween(before?: Task, after?: Task): number {
@@ -247,17 +264,24 @@ function positionBetween(before?: Task, after?: Task): number {
 
 export function BoardView({
   tasks,
+  columns: boardColumns,
   fields,
-  columnOrder = STATUS_ORDER,
   collapsedColumns = [],
+  canReorder = false,
   onAddTask,
   onColumnOrderChange,
   onToggleCollapsed,
+  onManageColumn,
+  onAddColumn,
 }: BoardViewProps) {
   const moveTask = useMoveTask();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   // Local echo of in-flight column changes so cards don't flicker back.
-  const [override, setOverride] = useState<Record<string, TaskStatus>>({});
+  const [override, setOverride] = useState<Record<string, string>>({});
+  const columnOrder = useMemo(
+    () => boardColumns.map((column) => column.id),
+    [boardColumns],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -269,34 +293,33 @@ export function BoardView({
   );
 
   const columns = useMemo(() => {
-    const byStatus = new Map<TaskStatus, Task[]>(
-      STATUS_ORDER.map((status) => [status, []]),
+    const byColumn = new Map<string, Task[]>(
+      boardColumns.map((column) => [column.id, []]),
     );
     for (const task of tasks) {
-      const status = override[task.id] ?? task.status;
-      byStatus.get(status)?.push(task);
+      const columnId = override[task.id] ?? task.columnId;
+      byColumn.get(columnId)?.push(task);
     }
-    for (const list of byStatus.values()) {
+    for (const list of byColumn.values()) {
       list.sort((a, b) => a.position - b.position);
     }
-    return byStatus;
-  }, [tasks, override]);
+    return byColumn;
+  }, [tasks, override, boardColumns]);
 
-  const isColumnId = (id: string): id is TaskStatus =>
-    STATUS_ORDER.includes(id as TaskStatus);
+  const isColumnId = (id: string): boolean => columnOrder.includes(id);
 
   /** True for a column itself or its card drop area — both mean "this column". */
   const isColumnTarget = (id: string): boolean =>
     isColumnId(id) || id.startsWith(DROPZONE_PREFIX);
 
-  const findColumn = (id: string): TaskStatus | undefined => {
+  const findColumn = (id: string): string | undefined => {
     if (id.startsWith(DROPZONE_PREFIX)) {
-      const status = id.slice(DROPZONE_PREFIX.length);
-      return isColumnId(status) ? status : undefined;
+      const columnId = id.slice(DROPZONE_PREFIX.length);
+      return isColumnId(columnId) ? columnId : undefined;
     }
     if (isColumnId(id)) return id;
     const task = tasks.find((t) => t.id === id);
-    return task ? (override[task.id] ?? task.status) : undefined;
+    return task ? (override[task.id] ?? task.columnId) : undefined;
   };
 
   const onDragStart = (event: DragStartEvent) => {
@@ -339,14 +362,14 @@ export function BoardView({
       return;
     }
 
-    const targetStatus = findColumn(overId);
+    const targetColumnId = findColumn(overId);
     const task = tasks.find((t) => t.id === activeId);
-    if (!task || !targetStatus) {
+    if (!task || !targetColumnId) {
       setOverride({});
       return;
     }
 
-    const column = (columns.get(targetStatus) ?? []).filter((t) => t.id !== task.id);
+    const column = (columns.get(targetColumnId) ?? []).filter((t) => t.id !== task.id);
     let index = column.length;
     if (!isColumnTarget(overId)) {
       const overIndex = column.findIndex((t) => t.id === overId);
@@ -355,13 +378,13 @@ export function BoardView({
     const position = positionBetween(column[index - 1], column[index]);
 
     // Nothing actually changed — skip the round trip.
-    if (task.status === targetStatus && task.position === position) {
+    if (task.columnId === targetColumnId && task.position === position) {
       setOverride({});
       return;
     }
 
     moveTask.mutate(
-      { id: task.id, status: targetStatus, position },
+      { id: task.id, columnId: targetColumnId, position },
       { onSettled: () => setOverride({}) },
     );
   };
@@ -383,17 +406,30 @@ export function BoardView({
           className="flex min-h-0 flex-1 snap-x gap-4 overflow-x-auto px-4 pb-6 sm:px-6"
           data-tour="board"
         >
-          {columnOrder.map((status) => (
-            <BoardColumn
-              key={status}
-              status={status}
-              tasks={columns.get(status) ?? []}
+          {boardColumns.map((column) => (
+            <BoardColumnPanel
+              key={column.id}
+              column={column}
+              tasks={columns.get(column.id) ?? []}
               fields={fields}
-              collapsed={collapsedColumns.includes(status)}
+              collapsed={collapsedColumns.includes(column.id)}
+              canReorder={canReorder}
               onAddTask={onAddTask}
               onToggleCollapsed={onToggleCollapsed}
+              onManageColumn={onManageColumn}
             />
           ))}
+
+          {onAddColumn ? (
+            <button
+              type="button"
+              onClick={onAddColumn}
+              className="flex h-fit w-[13rem] shrink-0 items-center gap-1.5 rounded-xl border border-dashed px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <Plus className="size-4" aria-hidden />
+              Add column
+            </button>
+          ) : null}
         </div>
       </SortableContext>
       <DragOverlay>

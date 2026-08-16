@@ -15,25 +15,17 @@ import { useLabels, useMembers } from "@/hooks/use-api";
 import {
   PRIORITY_META,
   PRIORITY_ORDER,
-  STATUS_META,
+  columnDotClass,
+  type BoardColumn,
   type Priority,
-  type TaskStatus,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PriorityIcon } from "./priority-badge";
 
-const STATUS_OPTIONS: TaskStatus[] = ["BACKLOG", "TODO", "DOING", "COMPLETED", "ON_HOLD"];
-
-export function StatusDot({
-  status,
-  className,
-}: {
-  status: TaskStatus;
-  className?: string;
-}) {
+export function StatusDot({ color, className }: { color: string; className?: string }) {
   return (
     <span
-      className={cn("size-2 rounded-full", STATUS_META[status].dotClass, className)}
+      className={cn("size-2 rounded-full", columnDotClass(color), className)}
       aria-hidden
     />
   );
@@ -51,23 +43,26 @@ export function StatusPicker({
   onChange,
   trigger,
   align = "end",
-}: PickerProps<TaskStatus>) {
+  columns,
+}: PickerProps<string> & { columns: BoardColumn[] }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-44 rounded-xl p-1.5">
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          Status
+          Column
         </DropdownMenuLabel>
-        {STATUS_OPTIONS.map((status) => (
+        {columns.map((column) => (
           <DropdownMenuItem
-            key={status}
-            onClick={() => onChange(status)}
+            key={column.id}
+            onClick={() => onChange(column.id)}
             className="gap-2"
           >
-            <StatusDot status={status} />
-            {STATUS_META[status].label}
-            {value === status ? <Check className="ml-auto size-4" aria-hidden /> : null}
+            <StatusDot color={column.color} />
+            <span className="truncate">{column.name}</span>
+            {value === column.id ? (
+              <Check className="ml-auto size-4 shrink-0" aria-hidden />
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
