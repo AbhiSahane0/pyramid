@@ -11,13 +11,8 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  DEFAULT_BOARD_PATH,
-  isBoardPath,
-  useTaskFilters,
-} from "@/components/providers/task-filter-context";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTaskFilters } from "@/components/providers/task-filter-context";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,15 +127,10 @@ export function AssistantWidget() {
   const removeMember = useRemoveMember();
   const updateMemberRole = useUpdateMemberRole();
 
+  // Filters live in the URL, so setting one is itself the navigation: running
+  // this from Settings lands on the board already filtered. Pushing to the
+  // board separately would arrive a moment later and overwrite the query.
   const { patchFilters, clearFilters } = useTaskFilters();
-  const router = useRouter();
-  const pathname = usePathname();
-  // Filters only exist on a board, so send the user to one if they ran the
-  // command from Settings or Members. Project boards count — filtering there
-  // is exactly as valid.
-  const showBoard = useCallback(() => {
-    if (!isBoardPath(pathname)) router.push(DEFAULT_BOARD_PATH);
-  }, [pathname, router]);
 
   const runners: CommandRunners = useMemo(
     () => ({
@@ -151,14 +141,8 @@ export function AssistantWidget() {
       inviteMember: (input) => inviteMember.mutateAsync(input),
       removeMember: (userId) => removeMember.mutateAsync(userId),
       updateMemberRole: (userId, role) => updateMemberRole.mutateAsync({ userId, role }),
-      applyFilter: (patch) => {
-        patchFilters(patch);
-        showBoard();
-      },
-      clearFilters: () => {
-        clearFilters();
-        showBoard();
-      },
+      applyFilter: patchFilters,
+      clearFilters,
     }),
     [
       createTask,
@@ -170,7 +154,6 @@ export function AssistantWidget() {
       updateMemberRole,
       patchFilters,
       clearFilters,
-      showBoard,
     ],
   );
 
