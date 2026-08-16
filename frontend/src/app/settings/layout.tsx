@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Palette, Search, SunMedium, UserRound } from "lucide-react";
+import { ArrowLeft, Palette, Search, SunMedium, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { title: "Profile", href: "/settings", icon: UserRound },
+  { title: "Workspace", href: "/settings/workspace", icon: Users },
   { title: "Theme", href: "/settings/theme", icon: SunMedium },
   { title: "Color", href: "/settings/color", icon: Palette },
 ];

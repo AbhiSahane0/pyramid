@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/components/providers/workspace-context";
 import {
   api,
+  getActiveWorkspaceId,
   type CreateTaskInput,
   type ProjectInput,
   type UpdateTaskInput,
@@ -336,6 +337,23 @@ export function useRenameWorkspace() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       toast.success("Workspace renamed");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+}
+
+export function useDeleteWorkspace() {
+  const queryClient = useQueryClient();
+  const { switchWorkspace, workspaces } = useWorkspace();
+  return useMutation({
+    mutationFn: api.workspaces.remove,
+    onSuccess: () => {
+      // The active workspace no longer exists, so move to another one before
+      // anything re-queries — otherwise every request 404s against a dead id.
+      const next = workspaces.find((w) => w.id !== getActiveWorkspaceId());
+      if (next) switchWorkspace(next.id);
+      queryClient.clear();
+      toast.success("Workspace deleted");
     },
     onError: (error) => toast.error(error.message),
   });

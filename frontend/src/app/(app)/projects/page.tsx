@@ -18,7 +18,7 @@ import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
 import { EmptyState } from "@/components/tasks/empty-state";
 import { MemberAvatars } from "@/components/tasks/member-avatars";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { TypeToConfirmDialog } from "@/components/type-to-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -280,7 +280,7 @@ export default function ProjectsPage() {
         project={editing}
       />
 
-      <ConfirmDialog
+      <TypeToConfirmDialog
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(undefined)}
         title="Delete this project?"
@@ -289,14 +289,14 @@ export default function ProjectsPage() {
         // is about to go.
         description={
           deleting?._count.tasks
-            ? `“${deleting.name}” and its ${deleting._count.tasks} ${
+            ? `Its ${deleting._count.tasks} ${
                 deleting._count.tasks === 1 ? "task" : "tasks"
-              } will be permanently deleted. This cannot be undone — move any task you want to keep to another project first.`
-            : `“${deleting?.name ?? ""}” will be permanently deleted. It has no tasks.`
+              } will be permanently deleted with it. This cannot be undone — move anything you want to keep to another project first.`
+            : "This project has no tasks. It will be permanently deleted."
         }
-        confirmLabel="Delete"
-        pendingLabel="Deleting…"
-        destructive
+        confirmationText={deleting?.name ?? ""}
+        prompt="Type the project name to confirm:"
+        confirmLabel="Delete project"
         pending={deleteProject.isPending}
         onConfirm={() => {
           if (!deleting) return;
