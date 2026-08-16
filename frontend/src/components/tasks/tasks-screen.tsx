@@ -2,6 +2,7 @@
 
 import { ListChecks, Plus, RotateCcw, SearchX, WifiOff } from "lucide-react";
 import { useState } from "react";
+import { useTaskFilters } from "@/components/providers/task-filter-context";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -73,7 +74,8 @@ export function TasksScreen({
   const reorderColumns = useReorderColumns();
   const [managingColumn, setManagingColumn] = useState<BoardColumn | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
-  const [filters, setFilters] = useState<TaskFilters>({});
+  // Held above this screen so the assistant can drive the same filters.
+  const { filters, patchFilters, clearFilters } = useTaskFilters();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounced(search);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -133,7 +135,7 @@ export function TasksScreen({
             <Button
               variant="outline"
               onClick={() => {
-                setFilters({});
+                clearFilters();
                 setSearch("");
               }}
             >
@@ -194,7 +196,8 @@ export function TasksScreen({
           onToggleField={toggleField}
           onResetLayout={resetLayout}
           filters={filters}
-          onFiltersChange={setFilters}
+          onFiltersChange={patchFilters}
+          onClearFilters={clearFilters}
           search={search}
           onSearchChange={setSearch}
           onAddTask={() => openAddTask()}

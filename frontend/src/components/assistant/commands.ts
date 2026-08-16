@@ -1,6 +1,8 @@
 import {
   ArrowRightLeft,
   CalendarClock,
+  Filter,
+  FilterX,
   FolderPlus,
   ListPlus,
   Pencil,
@@ -17,6 +19,7 @@ import {
   type Priority,
   type WorkspaceRole,
 } from "@/lib/types";
+import type { BoardFilters } from "@/components/providers/task-filter-context";
 import { parseDate } from "./dates";
 
 /**
@@ -27,7 +30,15 @@ import { parseDate } from "./dates";
  * id they cannot know.
  */
 export type ArgKind =
-  "text" | "email" | "choice" | "member" | "task" | "column" | "date" | "confirm";
+  | "text"
+  | "email"
+  | "choice"
+  | "member"
+  | "task"
+  | "column"
+  | "label"
+  | "date"
+  | "confirm";
 
 export interface ArgOption {
   value: string;
@@ -55,12 +66,17 @@ export interface AssistantCommand {
   label: string;
   hint: string;
   icon: LucideIcon;
-  group: "Tasks" | "People" | "Projects";
+  group: "Tasks" | "People" | "Projects" | "View";
   keywords: string[];
   /** Hidden from members: showing an action that can only 403 is a dead end. */
   adminOnly?: boolean;
   destructive?: boolean;
-  args: CommandArg[];
+  /**
+   * A function when a later question depends on an earlier answer — @filter
+   * asks "which column?" or "which priority?" depending on the field picked.
+   * Read it through `argsOf`, never directly.
+   */
+  args: CommandArg[] | ((values: Record<string, string>) => CommandArg[]);
   /** One line describing exactly what will happen, shown before running. */
   review: (values: Record<string, string>, labels: Record<string, string>) => string;
   run: (
@@ -100,6 +116,22 @@ export interface CommandRunners {
   }>;
   removeMember: (userId: string) => Promise<void>;
   updateMemberRole: (userId: string, role: WorkspaceRole) => Promise<{ name: string }>;
+  /**
+   * Narrows the board. Unlike the rest, this changes the screen rather than
+   * the database — it merges, and takes the user to the board if they ran it
+   * from somewhere else, since a filter you cannot see has not visibly done
+   * anything.
+   */
+  applyFilter: (patch: BoardFilters) => void;
+  clearFilters: () => void;
+}
+
+/** Resolves a command's arguments against what has been answered so far. */
+export function argsOf(
+  command: AssistantCommand,
+  values: Record<string, string>,
+): CommandArg[] {
+  return typeof command.args === "function" ? command.args(values) : command.args;
 }
 
 const priorityOptions: ArgOption[] = PRIORITY_ORDER.map((priority) => ({
@@ -144,6 +176,56 @@ const validEmail = (value: string): string | null =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
     ? null
     : "That doesn't look like an email address.";
+
+/** The task fields worth filtering by, and how each collects its value. */
+type FilterField = "columnId" | "priority" | "memberId" | "labelId";
+
+const FILTER_FIELDS: {
+  value: FilterField;
+  label: string;
+  description: string;
+}[] = [
+  { value: "columnId", label: "Column", description: "Where the task sits" },
+  { value: "priority", label: "Priority", description: "How urgent it is" },
+  { value: "memberId", label: "Assignee", description: "Who owns it" },
+  { value: "labelId", label: "Label", description: "How it is tagged" },
+];
+
+const FILTER_VALUE_ARGS: Record<FilterField, CommandArg> = {
+  columnId: {
+    key: "value",
+    label: "Column",
+    prompt: "Which column?",
+    placeholder: "Pick a column",
+    kind: "column",
+  },
+  priority: {
+    key: "value",
+    label: "Priority",
+    prompt: "Which priority?",
+    placeholder: "Pick a priority",
+    kind: "choice",
+    options: priorityOptions,
+  },
+  memberId: {
+    key: "value",
+    label: "Assignee",
+    prompt: "Whose tasks?",
+    placeholder: "Pick a person",
+    kind: "member",
+  },
+  labelId: {
+    key: "value",
+    label: "Label",
+    prompt: "Which label?",
+    placeholder: "Pick a label",
+    kind: "label",
+  },
+};
+
+/** "Column", "Priority"… taken from the chip label the user already saw. */
+const labelOfField = (labels: Record<string, string>): string =>
+  (labels.field ?? "field").toLowerCase();
 
 export const ASSISTANT_COMMANDS: AssistantCommand[] = [
   // --- Tasks ---
@@ -483,6 +565,53 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     run: async (v, deps) => {
       await deps.removeMember(v.member);
       return "Member removed.";
+    },
+  },
+
+  // --- View ---
+  {
+    id: "filter-board",
+    label: "Filter board",
+    hint: "Show only the tasks that match",
+    icon: Filter,
+    group: "View",
+    keywords: ["filter", "narrow", "show", "only", "find", "where"],
+    args: (values) => [
+      {
+        key: "field",
+        label: "Filter by",
+        prompt: "What should I filter by?",
+        placeholder: "Pick a field",
+        kind: "choice",
+        options: FILTER_FIELDS.map(({ value, label, description }) => ({
+          value,
+          label,
+          description,
+        })),
+      },
+      // The second question is chosen by the answer to the first, which is why
+      // this command's arguments are a function rather than a list.
+      FILTER_VALUE_ARGS[values.field as FilterField] ?? FILTER_VALUE_ARGS.columnId,
+    ],
+    review: (_v, l) => `Show only tasks where ${labelOfField(l)} is “${l.value}”.`,
+    run: async (v, deps, l) => {
+      const field = v.field as FilterField;
+      deps.applyFilter({ [field]: v.value } as BoardFilters);
+      return `Filtered to ${labelOfField(l)} “${l.value}”. Run @clear to undo.`;
+    },
+  },
+  {
+    id: "clear-filters",
+    label: "Clear filters",
+    hint: "Show every task again",
+    icon: FilterX,
+    group: "View",
+    keywords: ["clear", "reset", "all", "unfilter", "remove"],
+    args: [],
+    review: () => "Clear every filter on the board.",
+    run: async (_v, deps) => {
+      deps.clearFilters();
+      return "Filters cleared — showing every task.";
     },
   },
 

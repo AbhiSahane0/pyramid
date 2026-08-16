@@ -11,7 +11,13 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  DEFAULT_BOARD_PATH,
+  isBoardPath,
+  useTaskFilters,
+} from "@/components/providers/task-filter-context";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +27,7 @@ import {
   useCreateTask,
   useDeleteTask,
   useInviteMember,
+  useLabels,
   useRemoveMember,
   useTasks,
   useUpdateMemberRole,
@@ -31,6 +38,7 @@ import { useMounted } from "@/hooks/use-mounted";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
+  argsOf,
   availableCommands,
   filterCommands,
   suggestCommand,
@@ -67,7 +75,7 @@ interface Flow {
   command: AssistantCommand;
   values: Record<string, string>;
   labels: Record<string, string>;
-  /** Index into command.args; equal to args.length means "ready to run". */
+  /** Index into the resolved args; equal to their length means "ready to run". */
   step: number;
   error?: string;
 }
@@ -114,6 +122,7 @@ export function AssistantWidget() {
   const { data: members = [] } = useWorkspaceMembers();
   const { data: tasks = [] } = useTasks();
   const { data: columns = [] } = useColumns();
+  const { data: labels = [] } = useLabels();
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -122,6 +131,16 @@ export function AssistantWidget() {
   const inviteMember = useInviteMember();
   const removeMember = useRemoveMember();
   const updateMemberRole = useUpdateMemberRole();
+
+  const { patchFilters, clearFilters } = useTaskFilters();
+  const router = useRouter();
+  const pathname = usePathname();
+  // Filters only exist on a board, so send the user to one if they ran the
+  // command from Settings or Members. Project boards count — filtering there
+  // is exactly as valid.
+  const showBoard = useCallback(() => {
+    if (!isBoardPath(pathname)) router.push(DEFAULT_BOARD_PATH);
+  }, [pathname, router]);
 
   const runners: CommandRunners = useMemo(
     () => ({
@@ -132,6 +151,14 @@ export function AssistantWidget() {
       inviteMember: (input) => inviteMember.mutateAsync(input),
       removeMember: (userId) => removeMember.mutateAsync(userId),
       updateMemberRole: (userId, role) => updateMemberRole.mutateAsync({ userId, role }),
+      applyFilter: (patch) => {
+        patchFilters(patch);
+        showBoard();
+      },
+      clearFilters: () => {
+        clearFilters();
+        showBoard();
+      },
     }),
     [
       createTask,
@@ -141,6 +168,9 @@ export function AssistantWidget() {
       inviteMember,
       removeMember,
       updateMemberRole,
+      patchFilters,
+      clearFilters,
+      showBoard,
     ],
   );
 
@@ -150,14 +180,18 @@ export function AssistantWidget() {
   );
 
   const query = flow ? null : mentionQuery(draft);
-  const currentArg =
-    flow && flow.step < flow.command.args.length ? flow.command.args[flow.step] : null;
-  const readyToRun = Boolean(flow && flow.step === flow.command.args.length);
+  // A command whose questions depend on earlier answers grows its argument
+  // list as the flow progresses. Memoised on the flow itself: resolving it
+  // fresh each render would hand `currentArg` a new identity every time and
+  // defeat the memo below it.
+  const flowArgs = useMemo(() => (flow ? argsOf(flow.command, flow.values) : []), [flow]);
+  const currentArg = flow && flow.step < flowArgs.length ? flowArgs[flow.step] : null;
+  const readyToRun = Boolean(flow && flow.step === flowArgs.length);
   // Only steps already behind the cursor become chips. Stepping back with
   // Backspace re-asks a question, and showing its old answer as "done" right
   // above the same question reads as if it had already been handled.
   const chips = flow
-    ? flow.command.args.slice(0, flow.step).filter((arg) => flow.labels[arg.key])
+    ? flowArgs.slice(0, flow.step).filter((arg) => flow.labels[arg.key])
     : [];
 
   /** Rows shown above the composer: either the @ menu or the current step's options. */
@@ -212,6 +246,10 @@ export function AssistantWidget() {
             column._count.tasks === 1 ? "task" : "tasks"
           }`,
         }));
+    } else if (currentArg.kind === "label") {
+      rows = labels
+        .filter((label) => matches(label.name))
+        .map((label) => ({ id: label.id, label: label.name }));
     } else if (currentArg.kind === "date") {
       const typed = draft.trim();
       const parsed = typed ? parseDate(typed) : null;
@@ -248,7 +286,7 @@ export function AssistantWidget() {
       ];
     }
     return rows;
-  }, [query, commands, currentArg, draft, members, tasks, columns]);
+  }, [query, commands, currentArg, draft, members, tasks, columns, labels]);
 
   // The highlight belongs to one particular list. Storing the list it was
   // chosen for — rather than resetting it from an effect — means a new list
@@ -631,7 +669,7 @@ export function AssistantWidget() {
                     <span className="ml-1.5 font-normal text-muted-foreground">
                       {readyToRun
                         ? "ready"
-                        : `step ${flow.step + 1} of ${flow.command.args.length}`}
+                        : `step ${flow.step + 1} of ${flowArgs.length}`}
                     </span>
                   </p>
 

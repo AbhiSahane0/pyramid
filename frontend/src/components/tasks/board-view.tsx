@@ -229,7 +229,7 @@ function BoardColumnPanel({
           ))}
           {tasks.length === 0 ? (
             <p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-              Drop a task here
+              Add or Drop a task here
             </p>
           ) : null}
         </div>

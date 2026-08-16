@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { BoardFilters } from "@/components/providers/task-filter-context";
 import { StatusDot } from "@/components/tasks/pickers";
 import { PriorityIcon } from "@/components/tasks/priority-badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumns, useLabels, useMembers } from "@/hooks/use-api";
 import type { TaskField, ViewMode, ViewPrefs } from "@/hooks/use-view-prefs";
-import { PRIORITY_META, PRIORITY_ORDER, type TaskFilters } from "@/lib/types";
+import { PRIORITY_META, PRIORITY_ORDER } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const FIELD_OPTIONS: { key: TaskField; label: string }[] = [
@@ -54,8 +55,10 @@ interface ViewHeaderProps {
   onModeChange: (mode: ViewMode) => void;
   onToggleField: (field: TaskField) => void;
   onResetLayout?: () => void;
-  filters: TaskFilters;
-  onFiltersChange: (filters: TaskFilters) => void;
+  filters: BoardFilters;
+  /** Merged into the current filters, so one control never clears another. */
+  onFiltersChange: (patch: BoardFilters) => void;
+  onClearFilters: () => void;
   search: string;
   onSearchChange: (value: string) => void;
   onAddTask: () => void;
@@ -69,6 +72,7 @@ export function ViewHeader({
   onResetLayout,
   filters,
   onFiltersChange,
+  onClearFilters,
   search,
   onSearchChange,
   onAddTask,
@@ -94,9 +98,7 @@ export function ViewHeader({
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
-  const setFilter = (patch: Partial<TaskFilters>) => {
-    onFiltersChange({ ...filters, ...patch });
-  };
+  const setFilter = (patch: BoardFilters) => onFiltersChange(patch);
 
   const closeSearch = () => {
     onSearchChange("");
@@ -459,7 +461,7 @@ export function ViewHeader({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="justify-center text-muted-foreground"
-                  onClick={() => onFiltersChange({})}
+                  onClick={onClearFilters}
                 >
                   Clear all filters
                 </DropdownMenuItem>
