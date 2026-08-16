@@ -130,7 +130,7 @@ export function AssistantWidget() {
   // Filters live in the URL, so setting one is itself the navigation: running
   // this from Settings lands on the board already filtered. Pushing to the
   // board separately would arrive a moment later and overwrite the query.
-  const { patchFilters, clearFilters } = useTaskFilters();
+  const { patchFilters, setSearch, clearAll } = useTaskFilters();
 
   const runners: CommandRunners = useMemo(
     () => ({
@@ -142,7 +142,8 @@ export function AssistantWidget() {
       removeMember: (userId) => removeMember.mutateAsync(userId),
       updateMemberRole: (userId, role) => updateMemberRole.mutateAsync({ userId, role }),
       applyFilter: patchFilters,
-      clearFilters,
+      searchBoard: setSearch,
+      clearBoard: clearAll,
     }),
     [
       createTask,
@@ -153,7 +154,8 @@ export function AssistantWidget() {
       removeMember,
       updateMemberRole,
       patchFilters,
-      clearFilters,
+      setSearch,
+      clearAll,
     ],
   );
 

@@ -7,6 +7,7 @@ import {
   filtersFromParams,
   isBoardPath,
   paramsWithFilters,
+  paramsWithoutBoardState,
   paramsWithoutFilters,
   searchFromParams,
   SEARCH_KEY,
@@ -79,9 +80,14 @@ export function TaskFilterProvider({ children }: { children: ReactNode }) {
     [onBoard, searchParams, write],
   );
 
+  const clearAll = useCallback(
+    () => write(paramsWithoutBoardState(new URLSearchParams(searchParams))),
+    [searchParams, write],
+  );
+
   const value = useMemo(
-    () => ({ filters, patchFilters, clearFilters, search, setSearch }),
-    [filters, patchFilters, clearFilters, search, setSearch],
+    () => ({ filters, patchFilters, clearFilters, search, setSearch, clearAll }),
+    [filters, patchFilters, clearFilters, search, setSearch, clearAll],
   );
 
   return (

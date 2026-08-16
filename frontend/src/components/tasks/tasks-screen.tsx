@@ -75,7 +75,8 @@ export function TasksScreen({
   const [managingColumn, setManagingColumn] = useState<BoardColumn | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
   // Held above this screen so the assistant can drive the same filters.
-  const { filters, patchFilters, clearFilters, search, setSearch } = useTaskFilters();
+  const { filters, patchFilters, clearFilters, search, setSearch, clearAll } =
+    useTaskFilters();
 
   // The input needs to echo every keystroke; the URL should not. `typed` is
   // the instant copy and the committed term follows a beat later — but only
@@ -145,8 +146,7 @@ export function TasksScreen({
               variant="outline"
               onClick={() => {
                 setTyped({ committed: "", value: "" });
-                clearFilters();
-                setSearch("");
+                clearAll();
               }}
             >
               Clear search &amp; filters

@@ -67,6 +67,20 @@ export function paramsWithoutFilters(current: URLSearchParams): URLSearchParams 
   return next;
 }
 
+/**
+ * Strips filters and search together.
+ *
+ * Doing it in one pass is the point. Calling the two clearers in sequence
+ * looks equivalent but is not: both read the query string from the render
+ * they were created in, so the second write is computed from a URL the first
+ * has already replaced, and puts back what the first removed.
+ */
+export function paramsWithoutBoardState(current: URLSearchParams): URLSearchParams {
+  const next = paramsWithoutFilters(current);
+  next.delete(SEARCH_KEY);
+  return next;
+}
+
 export function searchFromParams(params: URLSearchParams): string {
   return params.get(SEARCH_KEY) ?? "";
 }
@@ -79,6 +93,8 @@ export interface TaskFilterContextValue {
   /** The committed search term. The input keeps its own instant copy. */
   search: string;
   setSearch: (term: string) => void;
+  /** Filters and search at once — see paramsWithoutBoardState. */
+  clearAll: () => void;
 }
 
 /**
@@ -93,6 +109,7 @@ export const TaskFilterContext = createContext<TaskFilterContextValue>({
   clearFilters: () => undefined,
   search: "",
   setSearch: () => undefined,
+  clearAll: () => undefined,
 });
 
 export function useTaskFilters(): TaskFilterContextValue {

@@ -5,6 +5,7 @@ import {
   FilterX,
   FolderPlus,
   ListPlus,
+  Search,
   Pencil,
   ShieldCheck,
   SignalHigh,
@@ -123,7 +124,10 @@ export interface CommandRunners {
    * anything.
    */
   applyFilter: (patch: BoardFilters) => void;
-  clearFilters: () => void;
+  /** Narrows the board by text, the same as typing in the search box. */
+  searchBoard: (term: string) => void;
+  /** Filters and search together — one write, so neither undoes the other. */
+  clearBoard: () => void;
 }
 
 /** Resolves a command's arguments against what has been answered so far. */
@@ -601,17 +605,40 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     },
   },
   {
+    id: "search-board",
+    label: "Search tasks",
+    hint: "Find tasks by title or description",
+    icon: Search,
+    group: "View",
+    keywords: ["search", "find", "look", "text", "title"],
+    args: [
+      {
+        key: "term",
+        label: "Search",
+        prompt: "What should I look for?",
+        placeholder: "e.g. billing",
+        kind: "text",
+        validate: requiredText,
+      },
+    ],
+    review: (v) => `Search the board for “${v.term}”.`,
+    run: async (v, deps) => {
+      deps.searchBoard(v.term);
+      return `Showing tasks matching “${v.term}”. Run @clear to undo.`;
+    },
+  },
+  {
     id: "clear-filters",
-    label: "Clear filters",
+    label: "Clear filters & search",
     hint: "Show every task again",
     icon: FilterX,
     group: "View",
     keywords: ["clear", "reset", "all", "unfilter", "remove"],
     args: [],
-    review: () => "Clear every filter on the board.",
+    review: () => "Clear every filter and the search on the board.",
     run: async (_v, deps) => {
-      deps.clearFilters();
-      return "Filters cleared — showing every task.";
+      deps.clearBoard();
+      return "Cleared — showing every task.";
     },
   },
 
