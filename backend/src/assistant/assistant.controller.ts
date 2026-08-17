@@ -31,6 +31,10 @@ export class AssistantController {
     @CurrentWorkspace() workspace: WorkspaceContext,
     @Body() dto: AskDto,
   ): Promise<AskResult> {
-    return this.assistant.ask(workspace.workspaceId, dto.question);
+    return this.assistant.ask(
+      workspace.workspaceId,
+      dto.question,
+      dto.history ?? [],
+    );
   }
 }

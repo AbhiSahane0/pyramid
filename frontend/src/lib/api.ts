@@ -225,10 +225,13 @@ export const api = {
   },
   assistant: {
     status: () => request<{ configured: boolean }>("/assistant/status"),
-    ask: (question: string) =>
+    ask: (input: {
+      question: string;
+      history?: { role: "user" | "assistant"; content: string }[];
+    }) =>
       request<{ answer: string; usedTools: string[] }>("/assistant/ask", {
         method: "POST",
-        body: { question },
+        body: input,
       }),
   },
   columns: {

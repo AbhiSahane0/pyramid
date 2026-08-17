@@ -83,23 +83,41 @@ export class InsightsService {
   }
 
   /**
-   * Confirms an assignee id belongs to this workspace.
+   * Checks the ids in a filter actually exist here.
    *
-   * Without this the model can pass an id for a person who is not here — or
-   * one it invented for a name nobody has — and get an honest count of zero
-   * back, which it then reports as "Rahul has 0 tasks". A zero and a
-   * non-existent person are different answers, and only one of them is true.
+   * Every one of these is a real id the model is meant to have fetched first,
+   * and a wrong one queries cleanly and returns zero. That zero is the danger:
+   * it is indistinguishable from a true empty result, so "no overdue tasks in
+   * To Do" gets reported when the id was simply a column *name*, and "Rahul
+   * has 0 tasks" when Rahul does not exist. Refusing beats answering.
    */
-  async unknownAssignee(
+  async unknownFilterTarget(
     workspaceId: string,
-    assigneeId: string,
-  ): Promise<{ error: string; knownMembers: string[] } | null> {
-    const members = await this.members(workspaceId);
-    if (members.some((member) => member.id === assigneeId)) return null;
-    return {
-      error: 'No such person in this workspace. Say so; do not report a count.',
-      knownMembers: members.map((member) => member.name),
-    };
+    filter: TaskFilter,
+  ): Promise<{ error: string; known: string[] } | null> {
+    if (filter.assigneeId) {
+      const members = await this.members(workspaceId);
+      if (!members.some((member) => member.id === filter.assigneeId)) {
+        return {
+          error:
+            'No such person in this workspace. Say so and name who is here; do not report a count.',
+          known: members.map((member) => member.name),
+        };
+      }
+    }
+
+    if (filter.columnId) {
+      const columns = await this.columns(workspaceId);
+      if (!columns.some((column) => column.id === filter.columnId)) {
+        return {
+          error:
+            'That is not a column id on this board — pass the id from list_columns, not the name. Do not report a count.',
+          known: columns.map((column) => column.name),
+        };
+      }
+    }
+
+    return null;
   }
 
   async countTasks(workspaceId: string, filter: TaskFilter): Promise<number> {

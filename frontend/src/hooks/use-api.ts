@@ -142,7 +142,7 @@ export function useAssistantStatus() {
 
 export function useAskAssistant() {
   return useMutation({
-    mutationFn: (question: string) => api.assistant.ask(question),
+    mutationFn: api.assistant.ask,
   });
 }
 

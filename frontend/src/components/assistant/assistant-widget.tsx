@@ -62,8 +62,19 @@ const PULSE_FOR_MS = 2_600;
 const GREETING: Message = {
   id: "greeting",
   role: "assistant",
-  body: "Hi — I'm Pyramid's assistant. Type @ to run an action like creating a task or inviting someone, and I'll walk you through it one step at a time.",
+  body: "Hi — I'm Pyramid's assistant. Ask me about this board, or type @ to run an action and I'll walk you through it one step at a time.",
 };
+
+/**
+ * Shown once, on an empty conversation. A blank box does not tell anyone that
+ * questions are answered from the real board, and these are the shapes worth
+ * knowing: a list, a count about a person, a ranking, a summary.
+ */
+const STARTERS = [
+  "What's overdue?",
+  "Who has the most open tasks?",
+  "How are we doing?",
+] as const;
 
 /** Sentinel id for the "skip this step" row. */
 const SKIP = "__skip__";
@@ -451,8 +462,8 @@ export function AssistantWidget() {
     }
   };
 
-  const sendFreeText = async () => {
-    const body = draft.trim();
+  const sendFreeText = async (question?: string) => {
+    const body = (question ?? draft).trim();
     if (!body || asking.isPending) return;
     setMessages((current) => [...current, { id: `u-${Date.now()}`, role: "user", body }]);
     setDraft("");
@@ -473,7 +484,14 @@ export function AssistantWidget() {
     }
 
     try {
-      const result = await asking.mutateAsync(body);
+      // Replay the conversation so "and which of those are overdue?" resolves.
+      // Command receipts are left out: they are this widget's own bookkeeping,
+      // not something the user said or the model answered.
+      const history = messages
+        .filter((message) => message.id !== GREETING.id && !message.tone)
+        .slice(-8)
+        .map((message) => ({ role: message.role, content: message.body }));
+      const result = await asking.mutateAsync({ question: body, history });
       say(result.answer);
     } catch (error) {
       say(
@@ -598,6 +616,27 @@ export function AssistantWidget() {
           </header>
 
           <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            {assistantReady && messages.length === 1 && !flow ? (
+              <div className="flex flex-wrap gap-1.5 pb-1">
+                {STARTERS.map((starter) => (
+                  <button
+                    key={starter}
+                    type="button"
+                    disabled={asking.isPending}
+                    onClick={() => {
+                      setDraft(starter);
+                      // Send on the click rather than only filling the box:
+                      // one tap should produce an answer, not homework.
+                      void sendFreeText(starter);
+                    }}
+                    className="cursor-pointer rounded-full border bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    {starter}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -631,7 +670,9 @@ export function AssistantWidget() {
                     />
                   ) : null}
                   <div className="min-w-0 flex-1">
-                    <p>{message.body}</p>
+                    {/* The model answers in plain text with real line breaks;
+                        without this every list collapses into one paragraph. */}
+                    <p className="whitespace-pre-wrap">{message.body}</p>
                     {message.suggestion ? (
                       <Button
                         variant="outline"
