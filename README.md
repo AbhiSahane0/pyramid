@@ -186,8 +186,3 @@ Documented per the assessment brief; everything else follows the design as close
 - **Avatars.** The mock's cartoon avatars are replaced with DiceBear-generated ones (same visual role); Google users get their real profile photo, guests get initials — matching the mock's "CN" initials pattern.
 - **Fields defaults** show Labels on the board cards (as the mock's board does); toggling Labels off in Fields reproduces the mock's exact list-view columns.
 - **Additions beyond the mock**, added because shipping them felt more honest than leaving dead UI or an unexplained first run: the column drag handle and column "…" menu are wired to real behaviour (reorder / collapse) rather than being decorative; a help menu in the topbar hosts the product tour and keyboard shortcuts; and the sidebar shows guests a note that their workspace is temporary.
-
-## Assessment mapping
-
-- **Part 1** — this repository (design fidelity, theme persistence, guest login, reusable components, NestJS APIs with validation, responsive across desktop/tablet/mobile).
-- **Part 2** — the AbleSpace "Take Data" workflow write-up is submitted as a separate document alongside this repo.
