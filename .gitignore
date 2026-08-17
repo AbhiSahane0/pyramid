@@ -36,8 +36,11 @@ coverage/
 # Local editor / agent config
 .claude/
 
-# backups
+# Database dumps taken by hand. Prisma migrations are source, not backups —
+# without the exception below they vanish from the repo and a deploy runs
+# against a schema that was never created.
 *.sql
+!backend/prisma/migrations/**/*.sql
 # Part 2 write-up — personal working files, not part of the submitted codebase
 /part-2/
 part-2-*.md
