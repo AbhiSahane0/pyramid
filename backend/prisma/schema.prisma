@@ -189,6 +189,10 @@ model BoardColumn {
   color    String @default("slate")
   /// Left-to-right order, shared by everyone looking at the board.
   position Float  @default(0)
+  /// Work in this column is finished. Boards name that column whatever they
+  /// like — "Shipped", "Live", "Merged" — so it cannot be inferred from the
+  /// name, and "overdue" or "open" would be wrong without it.
+  isDone   Boolean @default(false)
 
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

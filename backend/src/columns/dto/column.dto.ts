@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsIn,
   IsOptional,
   IsString,
@@ -19,6 +20,14 @@ export class CreateColumnDto {
   @IsOptional()
   @IsIn(BOARD_COLORS)
   color?: BoardColor;
+
+  @ApiPropertyOptional({
+    description: 'Work in this column is finished',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isDone?: boolean;
 }
 
 export class UpdateColumnDto {
@@ -32,6 +41,11 @@ export class UpdateColumnDto {
   @IsOptional()
   @IsIn(BOARD_COLORS)
   color?: BoardColor;
+
+  @ApiPropertyOptional({ description: 'Work in this column is finished' })
+  @IsOptional()
+  @IsBoolean()
+  isDone?: boolean;
 }
 
 export class ReorderColumnsDto {

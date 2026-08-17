@@ -119,6 +119,39 @@ describe('Pyramid API (e2e)', () => {
     }
   });
 
+  it('ships a board with exactly one finished column', async () => {
+    const response = await authed(agent().get('/api/columns')).expect(200);
+    const done = response.body.filter(
+      (column: { isDone: boolean }) => column.isDone,
+    );
+    // Without one, "overdue" would count finished work and "what did we
+    // complete" could never answer anything.
+    expect(done).toHaveLength(1);
+    expect(done[0].name).toBe('Completed');
+  });
+
+  it('says the assistant is unavailable rather than failing', async () => {
+    const status = await authed(agent().get('/api/assistant/status')).expect(
+      200,
+    );
+    expect(typeof status.body.configured).toBe('boolean');
+
+    // The suite runs without an API key, so asking must degrade rather than
+    // throw — the same contract the mail service already keeps.
+    if (!status.body.configured) {
+      await authed(
+        agent()
+          .post('/api/assistant/ask')
+          .send({ question: 'how many are overdue?' }),
+      ).expect(503);
+    }
+
+    // An empty question never reaches the paid API.
+    await authed(
+      agent().post('/api/assistant/ask').send({ question: '' }),
+    ).expect(400);
+  });
+
   it('offers demo personas only where they actually hold tasks', async () => {
     // Runs on its own throwaway account: it has to create a second workspace,
     // and the shared session's tests below assume that one still has exactly

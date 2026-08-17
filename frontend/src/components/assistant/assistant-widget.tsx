@@ -17,6 +17,8 @@ import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  useAskAssistant,
+  useAssistantStatus,
   useColumns,
   useCreateProject,
   useCreateTask,
@@ -131,6 +133,10 @@ export function AssistantWidget() {
   // this from Settings lands on the board already filtered. Pushing to the
   // board separately would arrive a moment later and overwrite the query.
   const { patchFilters, setSearch, clearAll } = useTaskFilters();
+
+  const { data: assistantStatus } = useAssistantStatus();
+  const asking = useAskAssistant();
+  const assistantReady = assistantStatus?.configured ?? false;
 
   const runners: CommandRunners = useMemo(
     () => ({
@@ -309,12 +315,18 @@ export function AssistantWidget() {
   useEffect(() => {
     if (!open) return;
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, running, flow, open]);
+  }, [messages, running, asking.isPending, flow, open]);
 
-  const say = (body: string, tone?: Message["tone"]) =>
+  const say = (body: string, tone?: Message["tone"], suggestion?: AssistantCommand) =>
     setMessages((current) => [
       ...current,
-      { id: `a-${Date.now()}-${Math.random()}`, role: "assistant", body, tone },
+      {
+        id: `a-${Date.now()}-${Math.random()}`,
+        role: "assistant",
+        body,
+        tone,
+        suggestion,
+      },
     ]);
 
   const openPanel = () => {
@@ -439,29 +451,38 @@ export function AssistantWidget() {
     }
   };
 
-  const sendFreeText = () => {
+  const sendFreeText = async () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body || asking.isPending) return;
     setMessages((current) => [...current, { id: `u-${Date.now()}`, role: "user", body }]);
     setDraft("");
 
-    // Answering questions needs a model behind it, which this doesn't have yet.
-    // What it can do is notice that the sentence describes an action it knows
-    // and offer to run it, so the request isn't simply refused.
-    const suggestion = suggestCommand(commands, body);
-    window.setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        {
-          id: `a-${Date.now()}`,
-          role: "assistant",
-          body: suggestion
-            ? "I can't answer questions yet — but this looks like something I can do:"
-            : "I can't answer questions yet — that part is still being built. For now, type @ and I'll run an action for you.",
-          suggestion: suggestion ?? undefined,
-        },
-      ]);
-    }, 500);
+    // A sentence that names an action is better served by running it than by
+    // being answered about, so the shortcut is still offered — but only when
+    // questions cannot be answered at all.
+    if (!assistantReady) {
+      const suggestion = suggestCommand(commands, body);
+      say(
+        suggestion
+          ? "Question answering isn't switched on here — but this looks like something I can do:"
+          : "Question answering isn't switched on for this server. Type @ and I'll run an action for you instead.",
+        undefined,
+        suggestion ?? undefined,
+      );
+      return;
+    }
+
+    try {
+      const result = await asking.mutateAsync(body);
+      say(result.answer);
+    } catch (error) {
+      say(
+        error instanceof ApiError
+          ? error.message
+          : "I couldn't reach the server just then. Try again in a moment.",
+        "error",
+      );
+    }
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -502,7 +523,7 @@ export function AssistantWidget() {
       event.preventDefault();
       if (readyToRun) void runCommand();
       else if (currentArg) submitText();
-      else sendFreeText();
+      else void sendFreeText();
     }
   };
 
@@ -630,11 +651,13 @@ export function AssistantWidget() {
               </div>
             ))}
 
-            {running ? (
+            {running || asking.isPending ? (
               <div className="flex justify-start" role="status">
                 <span className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" aria-hidden />
-                  Working on it…
+                  {/* A question reads the board before it answers, which takes
+                      a beat longer than running a command. */}
+                  {asking.isPending ? "Checking the board…" : "Working on it…"}
                 </span>
               </div>
             ) : null}
@@ -762,7 +785,11 @@ export function AssistantWidget() {
                 size="icon"
                 className="size-9 shrink-0 rounded-lg"
                 aria-label={readyToRun ? "Run the action" : "Send message"}
-                disabled={running || (!readyToRun && !currentArg && !draft.trim())}
+                disabled={
+                  running ||
+                  asking.isPending ||
+                  (!readyToRun && !currentArg && !draft.trim())
+                }
                 onClick={() => {
                   if (readyToRun) void runCommand();
                   else if (currentArg) submitText();

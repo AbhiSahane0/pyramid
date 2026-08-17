@@ -223,12 +223,22 @@ export const api = {
   labels: {
     list: () => request<Label[]>("/labels"),
   },
+  assistant: {
+    status: () => request<{ configured: boolean }>("/assistant/status"),
+    ask: (question: string) =>
+      request<{ answer: string; usedTools: string[] }>("/assistant/ask", {
+        method: "POST",
+        body: { question },
+      }),
+  },
   columns: {
     list: () => request<BoardColumn[]>("/columns"),
-    create: (input: { name: string; color?: BoardColor }) =>
+    create: (input: { name: string; color?: BoardColor; isDone?: boolean }) =>
       request<BoardColumn>("/columns", { method: "POST", body: input }),
-    update: (id: string, input: { name?: string; color?: BoardColor }) =>
-      request<BoardColumn>(`/columns/${id}`, { method: "PATCH", body: input }),
+    update: (
+      id: string,
+      input: { name?: string; color?: BoardColor; isDone?: boolean },
+    ) => request<BoardColumn>(`/columns/${id}`, { method: "PATCH", body: input }),
     reorder: (columnIds: string[]) =>
       request<BoardColumn[]>("/columns/order", {
         method: "PATCH",

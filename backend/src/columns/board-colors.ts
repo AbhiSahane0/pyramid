@@ -19,12 +19,22 @@ export const BOARD_COLORS = [
 
 export type BoardColor = (typeof BOARD_COLORS)[number];
 
-/** The board every new workspace starts with — the design's five columns. */
-export const DEFAULT_COLUMNS: { name: string; color: BoardColor }[] = [
+/**
+ * The board every new workspace starts with — the design's five columns.
+ *
+ * `isDone` marks the one that means finished. Without it a fresh board has no
+ * finished column at all, so "overdue" would include completed work and
+ * "what did we finish this week" would always answer nothing.
+ */
+export const DEFAULT_COLUMNS: {
+  name: string;
+  color: BoardColor;
+  isDone?: boolean;
+}[] = [
   { name: 'Backlog', color: 'amber' },
   { name: 'To Do', color: 'slate' },
   { name: 'Doing', color: 'blue' },
-  { name: 'Completed', color: 'emerald' },
+  { name: 'Completed', color: 'emerald', isDone: true },
   { name: 'On Hold', color: 'orange' },
 ];
 

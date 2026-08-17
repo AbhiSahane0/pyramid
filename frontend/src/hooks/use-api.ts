@@ -132,6 +132,20 @@ export function useLabels() {
   });
 }
 
+// --- Assistant ---
+
+export function useAssistantStatus() {
+  return useWorkspaceQuery(["assistant-status"], api.assistant.status, {
+    staleTime: Infinity,
+  });
+}
+
+export function useAskAssistant() {
+  return useMutation({
+    mutationFn: (question: string) => api.assistant.ask(question),
+  });
+}
+
 // --- Board columns ---
 
 export function useColumns() {
@@ -170,8 +184,13 @@ export function useCreateColumn() {
 
 export function useUpdateColumn() {
   return useColumnMutation(
-    ({ id, input }: { id: string; input: { name?: string; color?: BoardColor } }) =>
-      api.columns.update(id, input),
+    ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { name?: string; color?: BoardColor; isDone?: boolean };
+    }) => api.columns.update(id, input),
   );
 }
 

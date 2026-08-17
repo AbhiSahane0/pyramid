@@ -12,6 +12,8 @@ export interface BoardColumn {
   name: string;
   color: BoardColor;
   position: number;
+  /** Work here is finished — what "open" and "overdue" are measured against. */
+  isDone: boolean;
   _count: { tasks: number };
 }
 

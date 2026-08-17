@@ -44,6 +44,7 @@ export class ColumnsService {
         data: {
           name,
           color: dto.color ?? 'slate',
+          isDone: dto.isDone ?? false,
           position: (last?.position ?? 0) + POSITION_STEP,
           workspaceId,
         },
@@ -64,7 +65,7 @@ export class ColumnsService {
     try {
       return await this.prisma.boardColumn.update({
         where: { id },
-        data: { name, color: dto.color },
+        data: { name, color: dto.color, isDone: dto.isDone },
         include: { _count: { select: { tasks: true } } },
       });
     } catch (error) {

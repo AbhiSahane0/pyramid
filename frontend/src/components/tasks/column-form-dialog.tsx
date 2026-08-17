@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -87,6 +88,7 @@ function ColumnForm({
 
   const [name, setName] = useState(column?.name ?? "");
   const [color, setColor] = useState<BoardColor>(column?.color ?? "slate");
+  const [isDone, setIsDone] = useState(column?.isDone ?? false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [moveTasksTo, setMoveTasksTo] = useState<string>(others[0]?.id ?? "");
 
@@ -101,11 +103,11 @@ function ColumnForm({
     if (!canSave) return;
     if (column) {
       updateColumn.mutate(
-        { id: column.id, input: { name: trimmed, color } },
+        { id: column.id, input: { name: trimmed, color, isDone } },
         { onSuccess: close },
       );
     } else {
-      createColumn.mutate({ name: trimmed, color }, { onSuccess: close });
+      createColumn.mutate({ name: trimmed, color, isDone }, { onSuccess: close });
     }
   };
 
@@ -228,6 +230,22 @@ function ColumnForm({
               ))}
             </div>
           </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+            <Checkbox
+              checked={isDone}
+              disabled={pending}
+              onCheckedChange={(next) => setIsDone(next === true)}
+              className="mt-0.5"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">Work here is finished</span>
+              <span className="block text-sm text-muted-foreground">
+                Tasks in this column stop counting as open or overdue, and count as
+                completed when the assistant is asked what got done.
+              </span>
+            </span>
+          </label>
 
           <DialogFooter className="sm:justify-between">
             {column && columns.length > 1 ? (
