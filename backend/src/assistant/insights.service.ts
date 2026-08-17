@@ -16,7 +16,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export interface TaskFilter {
   assigneeId?: string;
   columnId?: string;
-  priority?: Priority;
+  /**
+   * One priority or several. "Critical" means URGENT *and* HIGH, and a single
+   * value cannot express that — the model would have to run two counts and add
+   * them, which is exactly the arithmetic these tools exist to avoid.
+   */
+  priority?: Priority | Priority[];
   projectId?: string;
   labelId?: string;
   /** true = only unfinished work, false = only finished. */
@@ -77,6 +82,26 @@ export class InsightsService {
     return users;
   }
 
+  /**
+   * Confirms an assignee id belongs to this workspace.
+   *
+   * Without this the model can pass an id for a person who is not here — or
+   * one it invented for a name nobody has — and get an honest count of zero
+   * back, which it then reports as "Rahul has 0 tasks". A zero and a
+   * non-existent person are different answers, and only one of them is true.
+   */
+  async unknownAssignee(
+    workspaceId: string,
+    assigneeId: string,
+  ): Promise<{ error: string; knownMembers: string[] } | null> {
+    const members = await this.members(workspaceId);
+    if (members.some((member) => member.id === assigneeId)) return null;
+    return {
+      error: 'No such person in this workspace. Say so; do not report a count.',
+      knownMembers: members.map((member) => member.name),
+    };
+  }
+
   async countTasks(workspaceId: string, filter: TaskFilter): Promise<number> {
     return this.prisma.task.count({ where: this.where(workspaceId, filter) });
   }
@@ -84,7 +109,7 @@ export class InsightsService {
   async findTasks(
     workspaceId: string,
     filter: TaskFilter,
-  ): Promise<{ tasks: TaskSummary[]; total: number }> {
+  ): Promise<{ tasks: TaskSummary[]; total: number; notShown: number }> {
     const where = this.where(workspaceId, filter);
     const [total, rows] = await Promise.all([
       this.prisma.task.count({ where }),
@@ -105,6 +130,10 @@ export class InsightsService {
 
     return {
       total,
+      // Computed here rather than left as total-minus-listed for the model to
+      // work out: it read "total" as the hidden count and announced five
+      // missing tasks when every one was on screen.
+      notShown: Math.max(0, total - rows.length),
       tasks: rows.map((task) => ({
         id: task.id,
         title: task.title,
@@ -250,7 +279,9 @@ export class InsightsService {
       // Subtasks would double-count against their parent in every total.
       parentId: null,
       columnId: filter.columnId,
-      priority: filter.priority,
+      priority: Array.isArray(filter.priority)
+        ? { in: filter.priority }
+        : filter.priority,
       projectId: filter.projectId,
     };
 

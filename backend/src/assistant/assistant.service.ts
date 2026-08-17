@@ -135,6 +135,21 @@ export class AssistantService {
     const filter = args as TaskFilter;
 
     try {
+      // A count filtered by somebody who is not here would come back as a
+      // truthful zero about a person who does not exist. Catch it before the
+      // query rather than trusting the model to check.
+      if (
+        (call.function.name === 'count_tasks' ||
+          call.function.name === 'find_tasks') &&
+        filter.assigneeId
+      ) {
+        const unknown = await this.insights.unknownAssignee(
+          workspaceId,
+          filter.assigneeId,
+        );
+        if (unknown) return unknown;
+      }
+
       switch (call.function.name) {
         case 'list_columns':
           return await this.insights.columns(workspaceId);
