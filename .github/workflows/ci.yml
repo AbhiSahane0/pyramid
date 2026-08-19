@@ -1,0 +1,101 @@
+name: CI
+
+# Runs on every push to main and on every pull request. Vercel and Render
+# deploy from main on their own, so this is the gate in front of them: a red
+# build here is the signal not to trust what just went live.
+on:
+  push:
+    branches: [main, next]
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch makes the first run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — lint, types, build, e2e
+    runs-on: ubuntu-latest
+
+    services:
+      # The e2e suite talks to a real database rather than mocks, so the
+      # migrations are exercised on every run too.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pyramid
+          POSTGRES_PASSWORD: pyramid
+          POSTGRES_DB: pyramid_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pyramid"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pyramid:pyramid@localhost:5432/pyramid_test
+      # Values the app refuses to boot without. Test-only, and deliberately
+      # not secrets — nothing here signs anything that leaves the runner.
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      NODE_ENV: test
+      # Left unset on purpose: the suite asserts the assistant and mail both
+      # degrade gracefully without their keys, so setting them here would
+      # stop testing the path most deployments actually run in.
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Apply migrations
+        # migrate deploy, not db push: this is the same command production
+        # runs, so a migration that only works against a fresh schema fails
+        # here rather than on the live database.
+        run: npx prisma migrate deploy
+
+      - run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - run: npm run build
+      - run: npm run test:e2e
+
+  frontend:
+    name: Frontend — lint, types, build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build
+        # No API is reachable from the runner, and none is needed: every data
+        # fetch happens in the browser through the proxy at runtime.
+        run: npm run build
