@@ -321,6 +321,109 @@ describe('Pyramid API (e2e)', () => {
     await authed(agent().post(`/api/invitations/${token}/accept`)).expect(403);
   });
 
+  it('reports which workspace an invitation was accepted into', async () => {
+    // The client needs this to land the new member in the workspace they
+    // joined. Without it they arrive in whichever workspace happens to be
+    // first — their own empty one — and joining looks like it failed.
+    const stamp = Date.now();
+    const invitee = await authService.loginWithGoogle({
+      googleId: `e2e-joined-${stamp}`,
+      email: `e2e-joined-${stamp}@example.com`,
+      name: 'Joining User',
+      avatarUrl: null,
+    });
+
+    try {
+      const invite = await authed(
+        agent()
+          .post('/api/workspaces/current/invitations')
+          .set('x-workspace-id', workspaceId)
+          .send({ email: invitee.email }),
+      ).expect(201);
+      const token = (invite.body.inviteUrl as string).split('/').pop()!;
+
+      const { accessToken } = await authService.issueTokens(invitee);
+      const cookie = [`access_token=${accessToken}`];
+
+      const accepted = await agent()
+        .post(`/api/invitations/${token}/accept`)
+        .set('Cookie', cookie)
+        .expect(200);
+
+      // The workspace they joined, not the one they already had.
+      expect(accepted.body.workspaceId).toBe(workspaceId);
+
+      const own = await agent()
+        .get('/api/workspaces')
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(own.body).toHaveLength(2);
+      expect(own.body[0].id).not.toBe(workspaceId);
+    } finally {
+      await prisma.user.delete({ where: { id: invitee.id } });
+    }
+  });
+
+  it('stops serving a project to members once it is deleted', async () => {
+    // The other half of the report: a member still seeing a project the owner
+    // had removed. If the API ever answered with it, no amount of refetching
+    // on the client would help — so pin the contract down here.
+    const stamp = Date.now();
+    const member = await authService.loginWithGoogle({
+      googleId: `e2e-deleted-${stamp}`,
+      email: `e2e-deleted-${stamp}@example.com`,
+      name: 'Member Watching',
+      avatarUrl: null,
+    });
+
+    try {
+      const invite = await authed(
+        agent()
+          .post('/api/workspaces/current/invitations')
+          .set('x-workspace-id', workspaceId)
+          .send({ email: member.email }),
+      ).expect(201);
+      const token = (invite.body.inviteUrl as string).split('/').pop()!;
+
+      const { accessToken } = await authService.issueTokens(member);
+      const asMember = (req: request.Test) =>
+        req
+          .set('Cookie', [`access_token=${accessToken}`])
+          .set('x-workspace-id', workspaceId);
+      await agent()
+        .post(`/api/invitations/${token}/accept`)
+        .set('Cookie', [`access_token=${accessToken}`])
+        .expect(200);
+
+      const project = await authed(
+        agent()
+          .post('/api/projects')
+          .set('x-workspace-id', workspaceId)
+          .send({ name: `Doomed ${stamp}` }),
+      ).expect(201);
+      const projectId = project.body.id as string;
+
+      // The member can see it while it exists…
+      const before = await asMember(agent().get('/api/projects')).expect(200);
+      expect(before.body.map((p: { id: string }) => p.id)).toContain(projectId);
+
+      await authed(
+        agent()
+          .delete(`/api/projects/${projectId}`)
+          .set('x-workspace-id', workspaceId),
+      ).expect(204);
+
+      // …and not afterwards, by either route.
+      const after = await asMember(agent().get('/api/projects')).expect(200);
+      expect(after.body.map((p: { id: string }) => p.id)).not.toContain(
+        projectId,
+      );
+      await asMember(agent().get(`/api/projects/${projectId}`)).expect(404);
+    } finally {
+      await prisma.user.delete({ where: { id: member.id } });
+    }
+  });
+
   it('refuses to guess the workspace for someone who belongs to several', async () => {
     // Reproduces what an invited member saw: their own sign-up workspace is
     // their oldest membership, so guessing served them an empty board instead

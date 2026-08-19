@@ -512,10 +512,23 @@ export function useLeaveWorkspaceTeam() {
 
 export function useAcceptInvitation() {
   const queryClient = useQueryClient();
+  const { switchWorkspace } = useWorkspace();
   return useMutation({
     mutationFn: api.invitations.accept,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    onSuccess: async ({ workspaceId }) => {
+      // Land in the workspace they just joined.
+      //
+      // Without this the accept succeeded and then dropped the user into
+      // whichever workspace happened to be first — which, for anyone who had
+      // signed in before, is their own empty one. Joining a team and being
+      // shown a blank board is indistinguishable from the invitation having
+      // failed.
+      //
+      // Awaited, not fired and forgotten: the id has to be in the list before
+      // anything points at it, or the provider falls back to the first
+      // workspace and the same blank board appears for a moment anyway.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      switchWorkspace(workspaceId);
     },
   });
 }

@@ -15,7 +15,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             retry: 1,
-            refetchOnWindowFocus: false,
+            // A board is shared, so what it shows can be made wrong by someone
+            // else — a project deleted in another browser stays on screen here
+            // until something asks the server again. Navigating remounts the
+            // query and does that; sitting still never did, so a member could
+            // spend an afternoon looking at work that no longer exists.
+            // Coming back to the tab is exactly the moment to catch up, and
+            // the staleTime below keeps that from being a request per glance.
+            refetchOnWindowFocus: true,
             staleTime: 10_000,
           },
         },
